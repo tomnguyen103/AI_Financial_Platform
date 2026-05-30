@@ -1,0 +1,30 @@
+# NL-to-SQL business glossary. DA Analysts edit this file (PRD AC-6.8).
+# Injected into the LLM prompt to reduce column hallucination (arch §2.6).
+tables:
+  collections: [collection_id, facility_id, attorney_id, case_type, collection_date, amount_collected, days_outstanding]
+  visits: [visit_id, facility_id, case_type, visit_date, billing_status, billed_amount, paid_amount, provider_id]
+  attorney_aging: [attorney_id, facility_id, bucket_0_30, bucket_31_60, bucket_61_90, bucket_91_180, bucket_180_plus, report_date]
+  settlements: [settlement_id, attorney_id, case_type, open_date, close_date, settlement_amount, settlement_status]
+  lop: [lop_id, facility_id, case_type, issued_date, returned_date, status, rejection_reason]
+
+glossary:
+  - term: unpaid visits
+    meaning: "visits WHERE billing_status = 'unpaid'"
+  - term: PI
+    meaning: "Personal Injury (case_type = 'PI')"
+  - term: Commercial
+    meaning: "case_type IN ('Commercial', 'Athena')"
+  - term: Athena
+    meaning: "case_type IN ('Commercial', 'Athena')"
+  - term: aging bucket
+    meaning: "the attorney_aging table"
+  - term: pending payment by attorney
+    meaning: "sum attorney_aging bucket_0_30 + bucket_31_60 + bucket_61_90 + bucket_91_180 + bucket_180_plus grouped by attorney_id"
+  - term: outstanding balance by attorney
+    meaning: "sum attorney_aging bucket_0_30 + bucket_31_60 + bucket_61_90 + bucket_91_180 + bucket_180_plus grouped by attorney_id"
+  - term: LOP
+    meaning: "the lop table (Letter of Protection)"
+  - term: overdue
+    meaning: "days_outstanding > 90"
+  - term: 180+ bucket
+    meaning: "attorney_aging.bucket_180_plus"

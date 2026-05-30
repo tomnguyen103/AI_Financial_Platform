@@ -1,0 +1,22 @@
+# Anomaly detection thresholds. Per-entity overrides under `overrides:`.
+# Spec refs: 04_data_and_ml_design.md §5; PRD AC-4.7 (configurable without code).
+defaults:
+  forecast_deviation:
+    p2_pct: -0.15      # 15% below forecast -> P2
+    p1_pct: -0.25      # 25% below forecast -> P1
+  cusum:
+    k: 0.5             # slack (in std devs)
+    p2_sigma: 4.0
+    p1_sigma: 6.0
+    window: 90         # rolling window for mean/std
+  isolation_forest:
+    contamination: 0.03
+    p2_score: -0.10
+    p1_score: -0.30
+
+overrides:
+  # Example: a newer/volatile facility gets wider bands to cut false positives.
+  facility_new_braunfels:
+    forecast_deviation:
+      p2_pct: -0.22
+      p1_pct: -0.35
