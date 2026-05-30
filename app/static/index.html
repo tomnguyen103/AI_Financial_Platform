@@ -26,6 +26,7 @@
     padding:8px 14px; font-weight:600; cursor:pointer;
   }
   button:hover { filter:brightness(1.08); }
+  button:disabled { opacity:.6; cursor:progress; filter:none; }
   button.ghost { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
   .pill { font-size:12px; padding:3px 9px; border-radius:999px; background:var(--panel2); color:var(--muted); }
   .pill.on { background:rgba(34,197,94,.15); color:var(--accent2); }
@@ -208,17 +209,42 @@ function headers() {
 }
 function money(n){ return (n==null) ? "—" : "$" + Number(n).toLocaleString(undefined,{maximumFractionDigits:0}); }
 
+let loggingIn = false;
 async function login() {
+  if (loggingIn) return;            // ignore double-clicks while a request is in flight
+  loggingIn = true;
   const role = $("role").value;
-  const r = await fetch(API + "/auth/token", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ user_id:"demo_user", role })
-  });
-  const d = await r.json();
-  token = d.access_token;
-  $("authState").textContent = "signed in · " + role;
-  $("authState").classList.add("on");
-  loadForecastEntities();
+  const btn = $("loginBtn");
+  btn.disabled = true;
+  btn.textContent = "Signing in…";
+  $("authState").classList.remove("on");
+  $("authState").textContent = "signing in…";
+  try {
+    const r = await fetch(API + "/auth/token", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ user_id:"demo_user", role })
+    });
+    if (!r.ok) {
+      let detail = "HTTP " + r.status;
+      try { const e = await r.json(); if (e && e.detail) detail = e.detail; } catch (_) {}
+      throw new Error(detail);
+    }
+    const d = await r.json();
+    if (!d.access_token) throw new Error("no token returned");
+    token = d.access_token;
+    $("authState").textContent = "signed in · " + role;
+    $("authState").classList.add("on");
+    loadForecastEntities();
+  } catch (err) {
+    token = null;
+    $("authState").classList.remove("on");
+    $("authState").textContent = "sign-in failed — retry";
+    console.error("Sign in failed:", err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sign in";
+    loggingIn = false;
+  }
 }
 
 function renderRetrieval(d) {
