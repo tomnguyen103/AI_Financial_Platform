@@ -18,7 +18,7 @@ and is containerized with **Docker** for deployment on **Render** (backend) and
 **Live demo:** [financial.tomnguyen.me](https://financial.tomnguyen.me)
 (Render free tier — the first request after idle may take ~30–50s to wake.)
 
-![AI Financial Platform dashboard — RAG chatbot, guarded NL-to-SQL, anomaly alerts, and collections forecasting](sample_image.png)
+![AI Financial Platform dashboard — RAG chatbot, guarded NL-to-SQL, anomaly alerts, and collections forecasting](sample-image.png)
 
 ### Role Alignment
 
