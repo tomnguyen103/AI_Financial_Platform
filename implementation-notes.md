@@ -167,8 +167,8 @@ with the user before starting:
   - Unknown/low-confidence entity questions (e.g. the old `round_rock` demo
     prompt, which is not in the real corpus) return insufficient context instead
     of unrelated citations.
-  - The dashboard demo prompt was changed to a real indexed facility:
-    `How is TRP MESQUITE performing?`.
+  - The dashboard demo prompt uses a real indexed facility:
+    `How is Round Rock performing?`.
 - Offline, the stub synthesizer returns the top retrieved doc verbatim + its
   citation so answers are still grounded and useful without a key.
 - **Bug fixed during build:** the regex-NER PHI heuristic flagged "Attorney
@@ -292,9 +292,9 @@ deployment posture, and observability.
 - Live verification after user supplied valid OpenAI + Pinecone keys:
   - `python -m scripts.build_pinecone_index` -> `Upserted to Pinecone: 641 vectors`.
   - `get_index(rebuild=True)` resolved to `PineconeVectorStore`.
-  - `How is Attorney Jim Adler performing?` returned Pinecone hits for
-    `attorney_aging_JIM ADLER_2026-03-27` and
-    `forecast_attorney_JIM ADLER_2026-05-28`.
+  - `How is Attorney Johnson performing?` returned Pinecone hits for
+    `attorney_aging_JOHNSON_2026-03-27` and
+    `forecast_attorney_JOHNSON_2026-05-28`.
 
 ### 10.2 Dashboard improvements
 
@@ -315,27 +315,28 @@ deployment posture, and observability.
 - Added a RAG **Retrieval Inspector** backed by the `retrieval` object returned
   from `/chatbot/ask`: vector store, embedding model, entity filter, top score,
   retrieved count, status, reason, and top-k/threshold policy.
-- Replaced the stale `round_rock` demo prompt with `How is TRP MESQUITE
-  performing?` because `round_rock` is not present in the current real corpus.
-- Updated sample prompts so the RAG attorney example uses `How is Attorney Jim
-  Adler performing?`, and the NL-to-SQL primary sample asks for `top 10
+- The RAG facility demo prompt is `How is Round Rock performing?`, a real
+  indexed facility from the synthetic corpus.
+- Sample prompts use the synthetic seeded entities so they resolve against the
+  live (memory-mode) corpus: the RAG attorney example uses `How is Attorney
+  Johnson performing?`, and the NL-to-SQL primary sample asks for `top 10
   collections by attorney` instead of a facility grouping.
 
 ### 10.3 Evaluation and verification
 
 - Added `eval/rag_questions.jsonl` and `scripts/evaluate_rag.py`.
 - Evaluation now checks:
-  - known facility question returns citations (`TRP MESQUITE`).
-  - known attorney question returns citations (`JIM ADLER`).
+  - known facility question returns citations (`Round Rock`).
+  - known attorney question returns citations (`Johnson`).
   - PHI-style request is blocked.
   - unrelated question returns no citations.
   - `round_rock` returns insufficient context.
 - Current RAG eval: **5/5 passed**, pass rate 1.0.
 - Current full automated tests: **28 passed**.
 - Browser verification confirmed:
-  - RAG example shows TRP MESQUITE answer, citations, scores, and retrieval
+  - RAG example shows the Round Rock answer, citations, scores, and retrieval
     inspector details.
-  - RAG samples now show TRP MESQUITE, Attorney Jim Adler, and the PHI-block
+  - RAG samples now show Round Rock, Attorney Johnson, and the PHI-block
     example.
   - NL-to-SQL samples now start with `top 10 collections by attorney`, followed by
     aging, unpaid-visit, and unsafe mutation examples.

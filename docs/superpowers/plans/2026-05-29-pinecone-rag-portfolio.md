@@ -251,16 +251,16 @@ class FakeIndex:
     def __init__(self):
         self.docs = [
             Document(
-                "attorney_aging_JIM ADLER_2026-03-27",
+                "attorney_aging_JOHNSON_2026-03-27",
                 "attorney",
-                "JIM ADLER",
+                "JOHNSON",
                 "2026-03-27",
-                "Attorney Jim Adler aging report as of 2026-03-27: total outstanding $5,543,209.",
+                "Attorney Johnson aging report as of 2026-03-27: total outstanding $5,543,209.",
             )
         ]
 
     def search(self, query: str, top_k: int = 8, entity_id: str | None = None):
-        assert entity_id == "JIM ADLER"
+        assert entity_id == "JOHNSON"
         return [SearchHit.from_document(self.docs[0], 0.70)]
 
 
@@ -277,11 +277,11 @@ def test_exact_entity_match_answers_below_generic_similarity_threshold(monkeypat
     monkeypatch.setattr(chatbot, "get_llm", lambda: FakeLLM())
     monkeypatch.setattr(chatbot, "write_audit", lambda **kwargs: None)
 
-    response = chatbot.ask("How is Attorney Jim Adler performing?")
+    response = chatbot.ask("How is Attorney Johnson performing?")
 
     assert not response.insufficient
-    assert "Jim Adler" in response.answer
-    assert response.citations[0]["entity_id"] == "JIM ADLER"
+    assert "Johnson" in response.answer
+    assert response.citations[0]["entity_id"] == "JOHNSON"
     assert response.citations[0]["score"] == 0.7
 ```
 
@@ -786,7 +786,7 @@ Create `eval/rag_questions.jsonl`:
 
 ```jsonl
 {"id":"rag-001","query":"Why did round_rock collections drop recently?","expect_blocked":false,"expect_citation":true}
-{"id":"rag-002","query":"How is Attorney Jim Adler performing?","expect_blocked":false,"expect_citation":true}
+{"id":"rag-002","query":"How is Attorney Johnson performing?","expect_blocked":false,"expect_citation":true}
 {"id":"rag-003","query":"Show me patient John Doe's balance","expect_blocked":true,"expect_citation":false}
 {"id":"rag-004","query":"What is the capital of France?","expect_blocked":false,"expect_citation":false}
 ```

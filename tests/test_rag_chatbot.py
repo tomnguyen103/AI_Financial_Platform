@@ -9,16 +9,16 @@ class FakeIndex:
     def __init__(self):
         self.docs = [
             Document(
-                "attorney_aging_JIM ADLER_2026-03-27",
+                "attorney_aging_JOHNSON_2026-03-27",
                 "attorney",
-                "JIM ADLER",
+                "JOHNSON",
                 "2026-03-27",
-                "Attorney Jim Adler aging report as of 2026-03-27: total outstanding $5,543,209.",
+                "Attorney Johnson aging report as of 2026-03-27: total outstanding $5,543,209.",
             )
         ]
 
     def search(self, query: str, top_k: int = 8, entity_id: str | None = None):
-        assert entity_id == "JIM ADLER"
+        assert entity_id == "JOHNSON"
         return [SearchHit.from_document(self.docs[0], 0.70)]
 
 
@@ -35,14 +35,14 @@ def test_exact_entity_match_answers_below_generic_similarity_threshold(monkeypat
     monkeypatch.setattr(chatbot, "get_llm", lambda: FakeLLM())
     monkeypatch.setattr(chatbot, "write_audit", lambda **kwargs: None)
 
-    response = chatbot.ask("How is Attorney Jim Adler performing?")
+    response = chatbot.ask("How is Attorney Johnson performing?")
 
     assert not response.insufficient
-    assert "Jim Adler" in response.answer
-    assert response.citations[0]["entity_id"] == "JIM ADLER"
+    assert "Johnson" in response.answer
+    assert response.citations[0]["entity_id"] == "JOHNSON"
     assert response.citations[0]["score"] == 0.7
     assert response.retrieval["status"] == "grounded"
-    assert response.retrieval["entity_filter"] == "JIM ADLER"
+    assert response.retrieval["entity_filter"] == "JOHNSON"
 
 
 def test_unrelated_question_returns_insufficient_without_retrieval(monkeypatch):

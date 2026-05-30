@@ -553,7 +553,7 @@ Every AI interaction produces an audit log entry:
 {
   "event_id": "uuid",
   "timestamp": "2026-05-28T08:23:11Z",
-  "user_id": "jsmith@org.com",
+  "user_id": "analyst@example.com",
   "user_role": "collections",
   "service": "chatbot | nl_to_sql | forecast_api",
   "query_hash": "sha256_of_input",
