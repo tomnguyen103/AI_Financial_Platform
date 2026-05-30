@@ -3,8 +3,22 @@
 ## Portfolio Case Study: Production-Style AI Financial Assistant
 
 This project demonstrates an AI Applications Developer workflow: building a
-secure AI-powered financial assistant from data pipelines through retrieval,
-LLM synthesis, API delivery, evaluation, and deployment.
+secure AI-powered financial assistant in **Python** from data pipelines through
+retrieval, LLM synthesis, API delivery, evaluation, and deployment. It is served
+by a **FastAPI** + **Uvicorn** gateway with **Pydantic** v2 validation, does ML
+with **NumPy**, **pandas**, and **scikit-learn** over **SQLite** and **Parquet**
+(**PyArrow**) data zones, performs RAG synthesis with **OpenAI** (GPT-4o, with an
+offline stub fallback and an **Azure OpenAI** seam) over **OpenAI embeddings**
+retrieved from **Pinecone** or an in-memory vector store, guards **NL-to-SQL**
+with **sqlglot**, secures access via **PyJWT** (JWT/RBAC) and HMAC-SHA256 PHI
+tokenization, ships a vanilla HTML/CSS/JS dashboard, is tested with **pytest**,
+and is containerized with **Docker** for deployment on **Render** (backend) and
+**Netlify** (frontend).
+
+**Live demo:** [financial.tomnguyen.me](https://financial.tomnguyen.me)
+(Render free tier — the first request after idle may take ~30–50s to wake.)
+
+![AI Financial Platform dashboard — RAG chatbot, guarded NL-to-SQL, anomaly alerts, and collections forecasting](sample_image.png)
 
 ### Role Alignment
 
