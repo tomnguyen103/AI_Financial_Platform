@@ -16,7 +16,7 @@ LLM synthesis, API delivery, evaluation, and deployment.
 | Data pipelines | Synthetic ingestion, feature store, forecasts, alerts |
 | Privacy/security | PHI scanning, HMAC tokenization, RBAC, audit logging |
 | Evaluation | RAG evaluation harness for citations, refusals, latency |
-| DevOps | Dockerfile and deployment-ready environment config |
+| DevOps | Dockerfile, Render (Docker) backend + Netlify frontend, env-based config |
 | Documentation | Architecture notes, implementation notes, demo instructions |
 
 A **local runnable MVP** of the platform described in the planning docs
@@ -39,7 +39,7 @@ made along the way).
 
 ## Requirements
 
-- Python 3.14 (developed/verified on 3.14.4)
+- Python 3.11+ (developed on 3.14; the Docker image pins 3.12)
 - Install deps:
 
 ```bash
@@ -138,6 +138,35 @@ questions are blocked, and responses stay within acceptable latency.
 ```bash
 python -m pytest tests/ -q     # security, NL-to-SQL safety, API/RBAC integration
 ```
+
+## Deployment (live demo)
+
+The platform runs as a single Docker container — FastAPI serves both the API and
+the dashboard. It needs **no external database and no API keys**: on startup it
+seeds deterministic synthetic data and serves the dashboard, so it runs anywhere
+the `Dockerfile` does.
+
+**Backend — Render (Docker), free tier:**
+
+1. New → Web Service → connect this repo → Render auto-detects the `Dockerfile`
+   → instance type **Free**.
+2. Set environment variables (never commit these):
+   - `JWT_SECRET`, `PHI_HMAC_KEY` — long random strings
+   - `CORS_ALLOW_ORIGINS` — your frontend origin, e.g. `https://yoursite.netlify.app`
+   - `VECTOR_STORE=memory` (default; set `pinecone` + keys to use a managed vector DB)
+   - `OPENAI_API_KEY` — optional; blank runs the offline stub
+3. Health check path: `/health`.
+
+The app binds `0.0.0.0:$PORT` and re-seeds synthetic data on boot when the
+(ephemeral) database is empty, so no persistent disk is required. Set
+`SEED_ON_STARTUP=0` to skip the boot-time seed.
+
+**Frontend — Netlify (static):** set `API_BASE` in `app/static/index.html` to the
+deployed backend URL, then publish `index.html`. Make sure `CORS_ALLOW_ORIGINS`
+on the backend matches the Netlify origin exactly (scheme + host, no trailing slash).
+
+> Ingestion is synthetic-only in this public build — no production database,
+> client schema, or real data is included anywhere in the repo.
 
 ## Project layout
 
