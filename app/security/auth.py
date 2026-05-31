@@ -22,13 +22,14 @@ ROLES = {"collections", "da_analyst", "admin"}
 #
 #   role          forecasts  alerts   chatbot  nl2sql  admin
 #   collections   read       read     use      -       -
-#   da_analyst    read+write read+write use     use     yes
+#   da_analyst    read+write read+write use     use     -
 #   admin         read+write read+write use     use     yes
 #
 # Each role gets a distinct capability set so account types are not
 # interchangeable: collections (front-line) can monitor but not run ad-hoc
-# NL-to-SQL or mutate state; da_analyst (finance/analyst power user) and admin
-# get reporting queries plus write + admin rights.
+# NL-to-SQL or mutate state; da_analyst (finance/analyst power user) adds
+# reporting queries plus write rights; admin is a strict superset that also
+# manages the model registry (champion/rollback) and feature-freshness SLAs.
 _CAPS: dict[str, set[str]] = {
     "forecasts:read": {"collections", "da_analyst", "admin"},
     "forecasts:write": {"da_analyst", "admin"},
@@ -36,7 +37,7 @@ _CAPS: dict[str, set[str]] = {
     "alerts:write": {"da_analyst", "admin"},
     "chatbot:use": {"collections", "da_analyst", "admin"},
     "nl2sql:use": {"da_analyst", "admin"},
-    "admin": {"admin", "da_analyst"},
+    "admin": {"admin"},
 }
 
 

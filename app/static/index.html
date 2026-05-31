@@ -193,6 +193,33 @@
     </div>
     <div id="fcOut" class="out muted">No forecast loaded.</div>
   </section>
+
+  <!-- Admin / MLOps (admin role only) -->
+  <section class="card" data-cap="admin">
+    <h2>Admin · MLOps <span class="muted">- model registry &amp; feature ops</span></h2>
+    <p class="hint">Admin-only controls: inspect the champion model and version history, monitor feature-freshness SLAs, and roll a model back to a prior version. Hidden for non-admin roles and enforced server-side (403).</p>
+    <div class="tech">
+      <span class="label">Tech</span>
+      <span class="t">Model registry</span><span class="t">Champion / rollback</span>
+      <span class="t">Feature freshness SLA</span><span class="t">RBAC: admin-only</span>
+    </div>
+    <div class="row">
+      <select id="admType">
+        <option value="facility">facility</option>
+        <option value="attorney">attorney</option>
+        <option value="case_type">case_type</option>
+      </select>
+      <select id="admEntity"><option>—</option></select>
+      <button id="admModelBtn">Load registry</button>
+      <button id="admFreshBtn" class="ghost">Feature freshness</button>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <input id="admVersion" type="number" min="1" placeholder="version"
+             style="width:90px;background:var(--panel2);color:inherit;border:1px solid var(--line);border-radius:6px;padding:6px 8px;"/>
+      <button id="admRollbackBtn" class="ghost">Roll back to version</button>
+    </div>
+    <div id="admOut" class="out muted">Admin tools — load the model registry or feature freshness.</div>
+  </section>
 </main>
 
 <script>
@@ -261,6 +288,7 @@ async function login() {
     $("authState").textContent = "signed in · " + role;
     $("authState").classList.add("on");
     if (perms.includes("forecasts:read")) loadForecastEntities();
+    if (perms.includes("admin")) loadAdminEntities();
   } catch (err) {
     token = null;
     perms = [];
@@ -380,6 +408,63 @@ async function loadForecastEntities() {
   sel.innerHTML = (d.entities||[]).map(e=>"<option>"+esc(e)+"</option>").join("") || "<option>—</option>";
 }
 
+// ---- Admin / MLOps (admin role only) ----
+async function loadAdminEntities() {
+  if (!token || !perms.includes("admin")) return;
+  const r = await fetch(API + "/forecasts/entities?entity_type=" + $("admType").value, { headers: headers() });
+  const d = await r.json();
+  $("admEntity").innerHTML = (d.entities || []).map(e => "<option>" + esc(e) + "</option>").join("") || "<option>—</option>";
+}
+function admModelName() { return "collections_" + $("admType").value + "_" + $("admEntity").value; }
+function admErr(r) {
+  $("admOut").innerHTML = "<span class='err'>" + r.status + " — " +
+    (r.status === 403 ? "admin only" : "request failed") + "</span>";
+}
+
+async function admLoadModel() {
+  if (!token) return need();
+  $("admOut").innerHTML = "<span class='muted'>Loading…</span>";
+  const r = await fetch(API + "/admin/models/" + encodeURIComponent(admModelName()), { headers: headers() });
+  if (!r.ok) return admErr(r);
+  const d = await r.json();
+  const c = d.champion;
+  const champ = c
+    ? "v" + c.version + " · " + esc(c.stage) + " · MAPE " + (c.mape == null ? "—" : fmt(c.mape)) +
+      " · coverage " + (c.coverage == null ? "—" : fmt(c.coverage))
+    : "none registered";
+  const versions = (d.versions || []).map(v =>
+    "<span class='chip'>v" + v.version + " " + esc(v.stage) + "</span>").join(" ") || "—";
+  $("admOut").innerHTML =
+    "<div><b>" + esc(d.model_name) + "</b></div>" +
+    "<div class='muted' style='margin-top:4px'>champion: " + champ + "</div>" +
+    "<div style='margin-top:8px'>versions: " + versions + "</div>";
+}
+
+async function admLoadFreshness() {
+  if (!token) return need();
+  $("admOut").innerHTML = "<span class='muted'>Loading…</span>";
+  const r = await fetch(API + "/admin/freshness", { headers: headers() });
+  if (!r.ok) return admErr(r);
+  const d = await r.json();
+  const rows = (d.freshness || []).map(f =>
+    "<div>" + esc(f.feature_group) + " · " + esc(f.last_updated) + " · " + f.row_count + " rows</div>").join("")
+    || "<div class='muted'>no feature groups</div>";
+  const stale = (d.stale_groups || []).length ? d.stale_groups.map(esc).join(", ") : "none";
+  $("admOut").innerHTML = rows + "<div class='muted' style='margin-top:8px'>stale groups: " + esc(stale) + "</div>";
+}
+
+async function admRollback() {
+  if (!token) return need();
+  const v = $("admVersion").value;
+  if (!v) { $("admOut").innerHTML = "<span class='err'>enter a version number</span>"; return; }
+  const r = await fetch(API + "/admin/models/" + encodeURIComponent(admModelName()) + "/rollback/" + encodeURIComponent(v),
+    { method: "POST", headers: headers() });
+  if (!r.ok) return admErr(r);
+  const d = await r.json();
+  $("admOut").innerHTML = "<span class='ok'>Promoted " + esc(d.model_name) +
+    " → v" + esc(d.production.version) + " (" + esc(d.production.stage) + ")</span>";
+}
+
 async function getForecast() {
   if(!token) return need();
   const type = $("fcType").value, ent = $("fcEntity").value, h = $("fcHorizon").value;
@@ -405,6 +490,10 @@ $("csvBtn").onclick = downloadCsv;
 $("alertBtn").onclick = loadAlerts;
 $("fcBtn").onclick = getForecast;
 $("fcType").onchange = loadForecastEntities;
+$("admModelBtn").onclick = admLoadModel;
+$("admFreshBtn").onclick = admLoadFreshness;
+$("admRollbackBtn").onclick = admRollback;
+$("admType").onchange = loadAdminEntities;
 document.querySelectorAll("[data-chat]").forEach(a=>a.onclick=()=>{ $("chatQ").value=a.dataset.chat; ask(); });
 document.querySelectorAll("[data-sql]").forEach(a=>a.onclick=()=>{ $("sqlQ").value=a.dataset.sql; runSql(); });
 </script>

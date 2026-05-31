@@ -41,6 +41,13 @@ def test_rbac_collections_cannot_rollback():
     assert r.status_code == 403
 
 
+def test_rbac_admin_capability_is_admin_only():
+    # da_analyst is a power user but cannot reach admin/MLOps endpoints;
+    # only 'admin' can.
+    assert client.get("/admin/freshness", headers=_auth("da_analyst")).status_code == 403
+    assert client.get("/admin/freshness", headers=_auth("admin")).status_code == 200
+
+
 def test_token_response_includes_permissions():
     body = client.post("/auth/token", json={"user_id": "t", "role": "da_analyst"}).json()
     assert "nl2sql:use" in body["permissions"]

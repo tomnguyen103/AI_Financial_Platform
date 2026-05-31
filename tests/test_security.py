@@ -52,8 +52,14 @@ def test_permissions_differ_by_role():
     # account types must not be interchangeable
     collections = permissions_for("collections")
     analyst = permissions_for("da_analyst")
+    admin = permissions_for("admin")
 
     assert "nl2sql:use" not in collections       # front-line: no ad-hoc querying
     assert "forecasts:write" not in collections  # read-only operational view
-    assert {"nl2sql:use", "forecasts:write", "alerts:write", "admin"} <= set(analyst)
-    assert collections != analyst
+    # analyst is a power user but NOT an admin (no registry management)
+    assert {"nl2sql:use", "forecasts:write", "alerts:write"} <= set(analyst)
+    assert "admin" not in analyst
+    # admin is a strict superset that adds the 'admin' capability
+    assert "admin" in admin
+    assert set(analyst) < set(admin)
+    assert collections != analyst != admin
