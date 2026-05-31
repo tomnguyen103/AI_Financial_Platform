@@ -39,6 +39,19 @@ log = get_logger("app.gateway")
 seed_status: dict[str, str] = {"state": "pending"}
 
 
+def _warm_rag_index() -> None:
+    # The RAG vector index is built lazily and cached (app.rag.index). A chat
+    # request arriving while the DB was still empty would cache an empty corpus
+    # and never rebuild. Build it here, once the DB has data, so the chatbot is
+    # grounded (and pre-warmed for the first question).
+    try:
+        from app.rag.index import get_index
+        store = get_index(rebuild=True)
+        log.info("RAG index ready", extra={"documents": len(store.docs)})
+    except Exception:  # noqa: BLE001 - chatbot degrades gracefully if this fails
+        log.exception("RAG index build failed")
+
+
 def _seed_in_background() -> None:
     # Render's filesystem is ephemeral, so the SQLite DB is empty after every
     # cold start/redeploy. The data is deterministic synthetic (SYNTH_SEED), so
@@ -50,15 +63,15 @@ def _seed_in_background() -> None:
         with tx() as conn:
             has_data = conn.execute("SELECT COUNT(*) FROM collections").fetchone()[0]
         if has_data:
-            seed_status["state"] = "ready"
             log.info("database already populated — skipping seed")
-            return
-        seed_status["state"] = "seeding"
-        log.info("empty database — seeding synthetic data in background")
-        from scripts.seed_data import main as seed
-        seed()
+        else:
+            seed_status["state"] = "seeding"
+            log.info("empty database — seeding synthetic data in background")
+            from scripts.seed_data import main as seed
+            seed()
+            log.info("background seed complete — data panels live")
+        _warm_rag_index()
         seed_status["state"] = "ready"
-        log.info("background seed complete — data panels live")
     except Exception:  # noqa: BLE001 - keep the API up even if seeding fails
         seed_status["state"] = "error"
         log.exception("background seed failed")

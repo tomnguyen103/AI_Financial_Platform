@@ -75,3 +75,29 @@ def test_unknown_facility_question_below_threshold_is_insufficient(monkeypatch):
     assert response.insufficient
     assert response.citations == []
     assert response.retrieval["reason"] == "below_similarity_threshold"
+
+
+def test_index_rebuild_refreshes_corpus_after_seed(monkeypatch):
+    """Regression: with background seeding the index can be built while the DB
+    is still empty (caching a 0-doc corpus). Once data lands, get_index(rebuild=
+    True) — which app.main._warm_rag_index calls after the seed — must refresh
+    the cached index instead of staying empty."""
+    import app.rag.corpus as corpus_mod
+    from app.rag import index as index_mod
+    from app.rag.corpus import Document
+
+    corpus: list[Document] = []
+    monkeypatch.setattr(corpus_mod, "build_corpus", lambda: list(corpus))
+    monkeypatch.setattr(index_mod.settings, "vector_store", "memory")
+    try:
+        index_mod._index = None
+        assert len(index_mod.get_index(rebuild=True).docs) == 0  # empty-DB cold start
+
+        # data is now seeded -> the rebuild must pick it up
+        corpus.append(Document(
+            "facility_collections_round_rock_2026-01-01", "facility", "round_rock",
+            "2026-01-01", "Facility Round Rock collections summary.",
+        ))
+        assert len(index_mod.get_index(rebuild=True).docs) == 1
+    finally:
+        index_mod._index = None  # don't leak a fake corpus into other tests
