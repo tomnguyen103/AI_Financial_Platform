@@ -24,7 +24,10 @@ def _auth(role: str = "da_analyst") -> dict:
 
 
 def test_health():
-    assert client.get("/health").json() == {"status": "ok"}
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    # background-seed readiness is surfaced for the UI / keep-warm pinger
+    assert body["data"] in {"pending", "seeding", "ready", "skipped", "error"}
 
 
 def test_unauthenticated_rejected():
@@ -34,6 +37,21 @@ def test_unauthenticated_rejected():
 def test_rbac_collections_cannot_rollback():
     # 'collections' lacks the 'admin' capability.
     r = client.post("/admin/models/seasonal_trend_facility/rollback/1",
+                    headers=_auth("collections"))
+    assert r.status_code == 403
+
+
+def test_token_response_includes_permissions():
+    r = client.post("/auth/token", json={"user_id": "t", "role": "finance"})
+    body = r.json()
+    assert r.status_code == 200
+    assert "nl2sql:use" in body["permissions"]
+    assert "admin" not in body["permissions"]
+
+
+def test_rbac_collections_cannot_use_nl2sql():
+    # collections is a front-line role without ad-hoc query rights
+    r = client.post("/nl2sql/query", json={"question": "total collected by facility"},
                     headers=_auth("collections"))
     assert r.status_code == 403
 

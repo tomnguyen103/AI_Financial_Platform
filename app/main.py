@@ -11,6 +11,7 @@ Auth + RBAC live in the route dependencies (app.security.auth.require).
 from __future__ import annotations
 
 import os
+import threading
 import time
 import uuid
 from collections import defaultdict, deque
@@ -31,22 +32,46 @@ configure_logging()
 log = get_logger("app.gateway")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    init_db()
+# Data-readiness flag for the heavy synthetic seed. Auth and the static UI do
+# NOT depend on seeded data, so we serve immediately and seed in the background;
+# only the data panels (forecasts/alerts) wait. States: pending|seeding|ready|
+# skipped|error — surfaced via /health so the UI and uptime pingers can poll it.
+seed_status: dict[str, str] = {"state": "pending"}
+
+
+def _seed_in_background() -> None:
     # Render's filesystem is ephemeral, so the SQLite DB is empty after every
     # cold start/redeploy. The data is deterministic synthetic (SYNTH_SEED), so
-    # we just regenerate it on boot when the tables are empty — no persistent
-    # disk required. Set SEED_ON_STARTUP=0 to disable (e.g. local dev).
-    if os.getenv("SEED_ON_STARTUP", "1") != "0":
-        from app.db import tx
+    # we regenerate it on boot when the tables are empty — no persistent disk
+    # required. Runs off the startup critical path so /auth/token (and the rest
+    # of the API) answer in milliseconds even during a cold-start seed.
+    from app.db import tx
+    try:
         with tx() as conn:
             has_data = conn.execute("SELECT COUNT(*) FROM collections").fetchone()[0]
-        if not has_data:
-            log.info("empty database — seeding synthetic data")
-            from scripts.seed_data import main as seed
-            seed()
-    log.info("startup complete")
+        if has_data:
+            seed_status["state"] = "ready"
+            log.info("database already populated — skipping seed")
+            return
+        seed_status["state"] = "seeding"
+        log.info("empty database — seeding synthetic data in background")
+        from scripts.seed_data import main as seed
+        seed()
+        seed_status["state"] = "ready"
+        log.info("background seed complete — data panels live")
+    except Exception:  # noqa: BLE001 - keep the API up even if seeding fails
+        seed_status["state"] = "error"
+        log.exception("background seed failed")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()  # fast: create the schema so reads don't error before data lands
+    if os.getenv("SEED_ON_STARTUP", "1") != "0":
+        threading.Thread(target=_seed_in_background, name="seed", daemon=True).start()
+    else:
+        seed_status["state"] = "skipped"
+    log.info("startup complete — accepting requests immediately")
     yield
     log.info("shutdown")
 
@@ -129,7 +154,9 @@ def dashboard() -> FileResponse:
 
 @app.get("/health", tags=["health"])
 def health() -> dict:
-    return {"status": "ok"}
+    # Cheap, DB-free liveness probe — also doubles as the keep-warm ping target.
+    # `data` reports the background seed state so clients can show "warming up".
+    return {"status": "ok", "data": seed_status["state"]}
 
 
 for r in (auth.router, forecasts.router, alerts.router, chatbot.router,

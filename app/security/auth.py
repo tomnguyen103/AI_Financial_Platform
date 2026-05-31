@@ -18,16 +18,32 @@ from app.config import settings
 # Roles and capability matrix (arch §2.7).
 ROLES = {"collections", "finance", "da_analyst", "admin"}
 
-# capability -> roles allowed
+# capability -> roles allowed (arch §2.7 permission matrix).
+#
+#   role          forecasts  alerts   chatbot  nl2sql  admin
+#   collections   read       read     use      -       -
+#   finance       read       read     use      use     -
+#   da_analyst    read+write read+write use     use     yes
+#   admin         read+write read+write use     use     yes
+#
+# Each role gets a distinct capability set so account types are not
+# interchangeable: collections (front-line) can monitor but not run ad-hoc
+# NL-to-SQL or mutate state; finance adds reporting queries; da_analyst/admin
+# are power users with write + admin rights.
 _CAPS: dict[str, set[str]] = {
     "forecasts:read": {"collections", "finance", "da_analyst", "admin"},
     "forecasts:write": {"da_analyst", "admin"},
     "alerts:read": {"collections", "finance", "da_analyst", "admin"},
     "alerts:write": {"da_analyst", "admin"},
     "chatbot:use": {"collections", "finance", "da_analyst", "admin"},
-    "nl2sql:use": {"collections", "finance", "da_analyst", "admin"},
+    "nl2sql:use": {"finance", "da_analyst", "admin"},
     "admin": {"admin", "da_analyst"},
 }
+
+
+def permissions_for(role: str) -> list[str]:
+    """Sorted capabilities granted to a role (drives UI panel gating)."""
+    return sorted(cap for cap, roles in _CAPS.items() if role in roles)
 
 _bearer = HTTPBearer(auto_error=True)
 

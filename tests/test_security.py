@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.security.auth import create_token, decode_token
+from app.security.auth import create_token, decode_token, permissions_for
 from app.security.phi import mask_record, scan_input, scan_output, tokenize
 
 
@@ -46,3 +46,17 @@ def test_jwt_roundtrip():
     tok = create_token("u1", "da_analyst")
     user = decode_token(tok)
     assert user.user_id == "u1" and user.role == "da_analyst"
+
+
+def test_permissions_differ_by_role():
+    # account types must not be interchangeable
+    collections = permissions_for("collections")
+    finance = permissions_for("finance")
+    analyst = permissions_for("da_analyst")
+
+    assert "nl2sql:use" not in collections      # front-line: no ad-hoc querying
+    assert "forecasts:write" not in collections  # read-only operational view
+    assert "nl2sql:use" in finance               # finance adds reporting queries
+    assert "forecasts:write" not in finance
+    assert {"forecasts:write", "alerts:write", "admin"} <= set(analyst)  # power user
+    assert collections != finance != analyst

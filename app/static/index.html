@@ -47,6 +47,7 @@
   .sev-P2 { color:var(--warn); font-weight:700; }
   .sev-P3 { color:var(--accent); font-weight:700; }
   .chip { display:inline-block; background:var(--panel2); border:1px solid var(--line); padding:2px 8px; border-radius:6px; font-size:11px; margin:2px 4px 2px 0; }
+  .permsbar { margin:0 auto 4px; max-width:1100px; padding:8px 12px; }
   .err { color:var(--danger); }
   .ok { color:var(--accent2); }
   .examples { margin-top:8px; }
@@ -94,9 +95,11 @@
   </div>
 </header>
 
+<div id="permsBar" class="permsbar" hidden></div>
+
 <main>
   <!-- Chatbot -->
-  <section class="card">
+  <section class="card" data-cap="chatbot:use">
     <h2>Ask the Financials <span class="muted">- RAG + vector search</span></h2>
     <p class="hint">Grounded answers over de-identified financial summaries, with source IDs, similarity scores, metadata filters, and PHI safeguards.</p>
     <div class="tech">
@@ -127,7 +130,7 @@
   </section>
 
   <!-- NL to SQL -->
-  <section class="card">
+  <section class="card" data-cap="nl2sql:use">
     <h2>Natural-Language Query <span class="muted">- guarded NL-to-SQL</span></h2>
     <p class="hint">Plain English to safe read-only SQL, with validation, row limits, CSV export, and audit logging.</p>
     <div class="tech">
@@ -152,7 +155,7 @@
   </section>
 
   <!-- Alerts -->
-  <section class="card">
+  <section class="card" data-cap="alerts:read">
     <h2>Anomaly Alerts <span class="muted">- monitored financial risk</span></h2>
     <p class="hint">Forecast deviation, CUSUM, and IsolationForest alerts with severity, expected-vs-actual values, and driver narratives.</p>
     <div class="tech">
@@ -167,7 +170,7 @@
   </section>
 
   <!-- Forecast -->
-  <section class="card">
+  <section class="card" data-cap="forecasts:read">
     <h2>Collections Forecast <span class="muted">- model registry output</span></h2>
     <p class="hint">Seasonal-trend forecasts with 80% confidence intervals, champion registry support, and rollback-ready model versions.</p>
     <div class="tech">
@@ -202,6 +205,7 @@ const BACKEND_URL = "https://ai-financial-platform-bit0.onrender.com";
 const LOCAL_HOSTS = ["localhost", "127.0.0.1", ""];
 const API = LOCAL_HOSTS.includes(location.hostname) ? location.origin : BACKEND_URL;
 let token = null;
+let perms = [];
 
 const $ = id => document.getElementById(id);
 function headers() {
@@ -210,6 +214,25 @@ function headers() {
   return h;
 }
 function money(n){ return (n==null) ? "—" : "$" + Number(n).toLocaleString(undefined,{maximumFractionDigits:0}); }
+
+// Show/hide each panel by the capability it needs, and surface the signed-in
+// role's permissions so account types are visibly different. role=null resets
+// to the signed-out state (all panels visible, badge hidden).
+function applyPermissions(role) {
+  const signedIn = !!role;
+  document.querySelectorAll("section.card[data-cap]").forEach(card => {
+    const cap = card.getAttribute("data-cap");
+    card.style.display = (!signedIn || perms.includes(cap)) ? "" : "none";
+  });
+  const bar = $("permsBar");
+  if (!signedIn) { bar.hidden = true; bar.innerHTML = ""; return; }
+  const chips = perms.length
+    ? perms.map(p => "<span class='chip'>" + esc(p) + "</span>").join(" ")
+    : "<span class='muted'>no capabilities</span>";
+  bar.innerHTML = "<span class='muted' style='font-size:12px'>" + esc(role) +
+    " can:</span> " + chips;
+  bar.hidden = false;
+}
 
 let loggingIn = false;
 async function login() {
@@ -234,11 +257,15 @@ async function login() {
     const d = await r.json();
     if (!d.access_token) throw new Error("no token returned");
     token = d.access_token;
+    perms = d.permissions || [];
+    applyPermissions(role);
     $("authState").textContent = "signed in · " + role;
     $("authState").classList.add("on");
-    loadForecastEntities();
+    if (perms.includes("forecasts:read")) loadForecastEntities();
   } catch (err) {
     token = null;
+    perms = [];
+    applyPermissions(null);
     $("authState").classList.remove("on");
     $("authState").textContent = "sign-in failed — retry";
     console.error("Sign in failed:", err);

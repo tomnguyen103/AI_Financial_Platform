@@ -171,9 +171,20 @@ the `Dockerfile` does.
    - `OPENAI_API_KEY` — optional; blank runs the offline stub
 3. Health check path: `/health`.
 
-The app binds `0.0.0.0:$PORT` and re-seeds synthetic data on boot when the
-(ephemeral) database is empty, so no persistent disk is required. Set
-`SEED_ON_STARTUP=0` to skip the boot-time seed.
+The app binds `0.0.0.0:$PORT` and re-seeds synthetic data when the (ephemeral)
+database is empty, so no persistent disk is required. The seed runs in a
+**background thread**, off the startup critical path — the API (including
+`/auth/token`) accepts requests immediately, so **sign-in is instant even during
+a cold-start seed**. Only the data panels (forecasts/alerts) wait for the seed;
+`/health` reports progress as `{"status":"ok","data":"pending|seeding|ready"}`.
+Set `SEED_ON_STARTUP=0` to skip the boot-time seed.
+
+**Avoid cold starts (keep-warm):** Render's free tier spins the instance down
+after ~15 min idle, so the *first* visit after idle still waits for the container
+to wake. To keep it warm, point a free uptime monitor (e.g.
+[cron-job.org](https://cron-job.org) or [UptimeRobot](https://uptimerobot.com))
+at `https://<your-backend>/health` on a ~10-minute interval. Combined with the
+background seed above, sign-in is then effectively instant for real users.
 
 **Frontend — Netlify (static):** set `BACKEND_URL` in `app/static/index.html` to the
 deployed backend URL (no trailing slash), then publish `index.html`. The page talks

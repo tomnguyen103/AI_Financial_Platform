@@ -8,7 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.security.auth import ROLES, create_token
+from app.security.auth import ROLES, create_token, permissions_for
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,10 +22,15 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: str
+    permissions: list[str]
 
 
 @router.post("/token", response_model=TokenResponse)
 def issue_token(req: TokenRequest) -> TokenResponse:
     if req.role not in ROLES:
         raise HTTPException(400, f"unknown role '{req.role}'. valid: {sorted(ROLES)}")
-    return TokenResponse(access_token=create_token(req.user_id, req.role), role=req.role)
+    return TokenResponse(
+        access_token=create_token(req.user_id, req.role),
+        role=req.role,
+        permissions=permissions_for(req.role),
+    )
