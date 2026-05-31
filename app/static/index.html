@@ -194,11 +194,13 @@
 </main>
 
 <script>
-// Local dev (page served by FastAPI): leave API_BASE empty -> same origin.
-// Hosted separately (e.g. Netlify): set API_BASE to your backend URL,
-// e.g. "https://your-app.onrender.com" (no trailing slash).
-const API_BASE = "";
-const API = API_BASE || location.origin;
+// The backend API (Render) and this frontend (Netlify) live on different
+// origins, so requests must target the backend explicitly. BACKEND_URL is the
+// deployed API (no trailing slash). For local dev the page is served by FastAPI
+// itself, so we fall back to the page's own origin and talk to it same-origin.
+const BACKEND_URL = "https://ai-financial-platform-bit0.onrender.com";
+const LOCAL_HOSTS = ["localhost", "127.0.0.1", ""];
+const API = LOCAL_HOSTS.includes(location.hostname) ? location.origin : BACKEND_URL;
 let token = null;
 
 const $ = id => document.getElementById(id);

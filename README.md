@@ -175,9 +175,11 @@ The app binds `0.0.0.0:$PORT` and re-seeds synthetic data on boot when the
 (ephemeral) database is empty, so no persistent disk is required. Set
 `SEED_ON_STARTUP=0` to skip the boot-time seed.
 
-**Frontend — Netlify (static):** set `API_BASE` in `app/static/index.html` to the
-deployed backend URL, then publish `index.html`. Make sure `CORS_ALLOW_ORIGINS`
-on the backend matches the Netlify origin exactly (scheme + host, no trailing slash).
+**Frontend — Netlify (static):** set `BACKEND_URL` in `app/static/index.html` to the
+deployed backend URL (no trailing slash), then publish `index.html`. The page talks
+same-origin only on `localhost`/`127.0.0.1` (local dev served by FastAPI); on any
+other host it calls `BACKEND_URL`. Make sure `CORS_ALLOW_ORIGINS` on the backend
+matches the Netlify origin exactly (scheme + host, no trailing slash).
 
 > Ingestion is synthetic-only in this public build — no production database,
 > client schema, or real data is included anywhere in the repo.
