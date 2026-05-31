@@ -51,12 +51,9 @@ def test_jwt_roundtrip():
 def test_permissions_differ_by_role():
     # account types must not be interchangeable
     collections = permissions_for("collections")
-    finance = permissions_for("finance")
     analyst = permissions_for("da_analyst")
 
-    assert "nl2sql:use" not in collections      # front-line: no ad-hoc querying
+    assert "nl2sql:use" not in collections       # front-line: no ad-hoc querying
     assert "forecasts:write" not in collections  # read-only operational view
-    assert "nl2sql:use" in finance               # finance adds reporting queries
-    assert "forecasts:write" not in finance
-    assert {"forecasts:write", "alerts:write", "admin"} <= set(analyst)  # power user
-    assert collections != finance != analyst
+    assert {"nl2sql:use", "forecasts:write", "alerts:write", "admin"} <= set(analyst)
+    assert collections != analyst

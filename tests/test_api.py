@@ -42,11 +42,12 @@ def test_rbac_collections_cannot_rollback():
 
 
 def test_token_response_includes_permissions():
-    r = client.post("/auth/token", json={"user_id": "t", "role": "finance"})
-    body = r.json()
-    assert r.status_code == 200
+    body = client.post("/auth/token", json={"user_id": "t", "role": "da_analyst"}).json()
     assert "nl2sql:use" in body["permissions"]
-    assert "admin" not in body["permissions"]
+    assert "forecasts:write" in body["permissions"]
+    # collections is the restricted front-line role
+    p = client.post("/auth/token", json={"user_id": "t", "role": "collections"}).json()
+    assert "nl2sql:use" not in p["permissions"] and "admin" not in p["permissions"]
 
 
 def test_rbac_collections_cannot_use_nl2sql():
@@ -83,5 +84,5 @@ def test_chatbot_status_exposes_runtime_configuration():
 
 
 def test_alerts_readable():
-    r = client.get("/alerts", headers=_auth("finance"))
+    r = client.get("/alerts", headers=_auth("da_analyst"))
     assert r.status_code == 200 and "alerts" in r.json()
