@@ -1,8 +1,6 @@
 """Security-layer tests: PHI tokenization, scanners, JWT/RBAC."""
 from __future__ import annotations
 
-import pytest
-
 from app.security.auth import create_token, decode_token, permissions_for
 from app.security.phi import mask_record, scan_input, scan_output, tokenize
 

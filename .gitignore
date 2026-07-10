@@ -36,3 +36,6 @@ data/
 .fuse_hidden*
 .DS_Store
 Thumbs.db
+
+# code intelligence index
+.codegraph/

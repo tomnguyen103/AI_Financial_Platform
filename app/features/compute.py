@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 from app.db import tx
-from app.features.definitions import FEATURE_GROUPS, HIGH_VALUE_SETTLEMENT_THRESHOLD
+from app.features.definitions import HIGH_VALUE_SETTLEMENT_THRESHOLD
 
 
 def _read(table: str) -> pd.DataFrame:
@@ -28,7 +28,7 @@ def _read(table: str) -> pd.DataFrame:
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def _write_group(group: str, records: list[tuple[str, str, dict]]) -> int:
@@ -132,7 +132,7 @@ def compute_visit_velocity() -> int:
         nv30 = g["n"].rolling(30, min_periods=1).sum()
         billed7 = g["billed"].rolling(7, min_periods=1).sum()
         pending7 = g["pending"].rolling(7, min_periods=1).sum()
-        for date, r in g.iterrows():
+        for date, _r in g.iterrows():
             n7 = float(nv7[date])
             out.append((f"{fac}|{ct}", date.date().isoformat(), {
                 "new_visits_7d": int(nv7[date]),

@@ -28,7 +28,7 @@ REGRESSION_BLOCK_PP = 3.0     # block + alert if worse by >3pp (AC-3.5)
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def next_version(model_name: str) -> int:

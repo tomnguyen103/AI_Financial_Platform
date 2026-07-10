@@ -57,7 +57,7 @@ class User:
 def create_token(user_id: str, role: str) -> str:
     if role not in ROLES:
         raise ValueError(f"unknown role: {role}")
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     payload = {
         "sub": user_id,
         "role": role,
@@ -71,7 +71,7 @@ def decode_token(token: str) -> User:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_alg])
     except jwt.PyJWTError as e:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"invalid token: {e}")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"invalid token: {e}") from e
     return User(user_id=payload["sub"], role=payload.get("role", ""))
 
 

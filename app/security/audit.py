@@ -15,7 +15,7 @@ from app.db import tx
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def query_hash(text: str) -> str:

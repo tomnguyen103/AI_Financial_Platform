@@ -24,7 +24,7 @@ _Z95 = 1.9600
 @runtime_checkable
 class Forecaster(Protocol):
     name: str
-    def fit(self, series: pd.Series) -> "Forecaster": ...
+    def fit(self, series: pd.Series) -> Forecaster: ...
     def predict_horizon(self, horizon: int) -> dict: ...
 
 
@@ -42,7 +42,7 @@ class SeasonalTrendForecaster:
         self._n = 0
         self._last_date: pd.Timestamp | None = None
 
-    def fit(self, series: pd.Series) -> "SeasonalTrendForecaster":
+    def fit(self, series: pd.Series) -> SeasonalTrendForecaster:
         series = series.sort_index().asfreq("D", fill_value=0.0)
         y = series.values.astype(float)
         n = len(y)
@@ -99,10 +99,12 @@ class SeasonalTrendForecaster:
         }
 
     @classmethod
-    def from_state(cls, s: dict) -> "SeasonalTrendForecaster":
+    def from_state(cls, s: dict) -> SeasonalTrendForecaster:
         m = cls()
         m._slope, m._intercept = s["slope"], s["intercept"]
-        m._weekday = np.array(s["weekday"]); m._month = np.array(s["month"])
-        m._resid_std = s["resid_std"]; m._n = s["n"]
+        m._weekday = np.array(s["weekday"])
+        m._month = np.array(s["month"])
+        m._resid_std = s["resid_std"]
+        m._n = s["n"]
         m._last_date = pd.Timestamp(s["last_date"]) if s["last_date"] else None
         return m

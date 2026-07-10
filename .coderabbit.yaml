@@ -1,0 +1,13 @@
+# CodeRabbit configuration
+# Reviews are triggered only on explicit request (opening a non-draft PR,
+# marking a draft ready, or commenting "@coderabbitai review"). Pushes never
+# auto-review, to conserve the review budget.
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: false
+  poem: false
