@@ -115,6 +115,11 @@ CREATE TABLE IF NOT EXISTS ingest_audit (
 CREATE INDEX IF NOT EXISTS idx_collections_facility_date ON collections(facility_id, collection_date);
 CREATE INDEX IF NOT EXISTS idx_visits_facility_date ON visits(facility_id, visit_date);
 CREATE INDEX IF NOT EXISTS idx_forecasts_entity ON forecasts(entity_type, entity_id, horizon_days, forecast_date);
+CREATE INDEX IF NOT EXISTS idx_visits_billing_status ON visits(billing_status);
+CREATE INDEX IF NOT EXISTS idx_collections_attorney ON collections(attorney_id, collection_date);
+CREATE INDEX IF NOT EXISTS idx_collections_case_type ON collections(case_type, collection_date);
+CREATE INDEX IF NOT EXISTS idx_alerts_status_created ON alerts(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_alerts_severity_created ON alerts(severity, created_at);
 """
 
 

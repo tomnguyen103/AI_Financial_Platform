@@ -19,6 +19,7 @@ import json
 import uuid
 
 import pandas as pd
+from pydantic import ValidationError
 
 from app.config import CURATED_ZONE, RAW_ZONE, settings
 from app.db import tx
@@ -37,15 +38,32 @@ def _load_source() -> dict[str, list[dict]]:
     return synth_generate()
 
 
-def _validate_rows(entity: str, rows: list[dict]) -> tuple[list[dict], int]:
+_MAX_ERROR_SAMPLES = 5  # distinct validation error strings retained per entity
+
+
+def _validate_rows(entity: str, rows: list[dict]) -> tuple[list[dict], int, list[str]]:
     model, _ = ENTITY_MODELS[entity]
     valid, failed = [], 0
+    error_samples: list[str] = []  # first ~5 DISTINCT errors (capped, no growth)
+    def _record(msg: str) -> None:
+        if msg not in error_samples and len(error_samples) < _MAX_ERROR_SAMPLES:
+            error_samples.append(msg)
+
     for r in rows:
         try:
             valid.append(model(**r).model_dump())
-        except Exception:
+        except ValidationError as e:
             failed += 1
-    return valid, failed
+            # Field-level summaries (loc: msg) from the structured errors — not
+            # the generic "N validation errors for X" header — and without
+            # echoing raw input values into the stored sample.
+            for err in e.errors():
+                loc = ".".join(str(p) for p in err.get("loc", ()))
+                _record(f"{loc}: {err.get('msg', '')}".strip(": "))
+        except Exception as e:  # noqa: BLE001 - non-validation failure still counts
+            failed += 1
+            _record(str(e).splitlines()[0])
+    return valid, failed, error_samples
 
 
 def _prior_counts() -> dict[str, int]:
@@ -71,15 +89,18 @@ def run_ingest(*, fail_on_quality: bool = True) -> dict:
     total_failed = 0
     failures: list[str] = []
     warnings: list[str] = []
+    validation_errors: dict[str, list[str]] = {}  # entity -> sample error strings
     curated_frames: dict[str, pd.DataFrame] = {}
 
     permissive = getattr(settings, "ingest_permissive", False)
 
     for entity, rows in raw.items():
         total_source += len(rows)
-        valid, failed = _validate_rows(entity, rows)
+        valid, failed, error_samples = _validate_rows(entity, rows)
         total_passed += len(valid)
         total_failed += failed
+        if error_samples:
+            validation_errors[entity] = error_samples
 
         df_raw = pd.DataFrame(valid)
 
@@ -148,14 +169,15 @@ def run_ingest(*, fail_on_quality: bool = True) -> dict:
                VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (run_id, _utcnow(), total_source, total_passed, total_failed, 1,
              int(schema_ok), int(quality_ok), "system",
-             json.dumps({"failures": failures, "warnings": warnings, "aborted": abort})),
+             json.dumps({"failures": failures, "warnings": warnings, "aborted": abort,
+                         "validation_errors": validation_errors})),
         )
 
     return {
         "run_id": run_id, "source_records": total_source, "passed": total_passed,
         "failed": total_failed, "schema_ok": schema_ok, "quality_ok": quality_ok,
         "aborted": abort, "failures": failures, "warnings": warnings,
-        "permissive": permissive,
+        "validation_errors": validation_errors, "permissive": permissive,
     }
 
 
