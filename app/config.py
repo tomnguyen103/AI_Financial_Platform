@@ -114,6 +114,12 @@ class Settings(BaseSettings):
                 "APP_ENV=production but insecure default secrets are still in "
                 f"use: {', '.join(problems)}. Set them via .env / Key Vault."
             )
+        if self.enable_dev_token:
+            raise RuntimeError(
+                "APP_ENV=production but ENABLE_DEV_TOKEN is still enabled; the "
+                "unauthenticated /auth/token issuer mints admin tokens. Set "
+                "ENABLE_DEV_TOKEN=0 in production."
+            )
 
 
 @lru_cache

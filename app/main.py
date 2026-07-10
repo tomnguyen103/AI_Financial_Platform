@@ -136,7 +136,9 @@ def _client_ip(request: Request) -> str:
     if settings.trust_proxy:
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
-            return forwarded.split(",")[0].strip()
+            # X-Forwarded-For is attacker-controllable; strip CR/LF so the value
+            # (which gets logged) can't forge log lines (CWE-117).
+            return forwarded.split(",")[0].strip().replace("\r", "").replace("\n", "")
     return request.client.host if request.client else "unknown"
 
 
