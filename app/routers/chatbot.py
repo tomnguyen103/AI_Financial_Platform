@@ -1,6 +1,8 @@
 """RAG chatbot endpoint "Ask the Financials" (PRD Module 5; arch §2.5)."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -17,30 +19,51 @@ class AskRequest(BaseModel):
     session_id: str | None = None
 
 
-@router.post("/ask")
-def ask_endpoint(req: AskRequest, user: User = Depends(require("chatbot:use"))) -> dict:
+class AskResponse(BaseModel):
+    answer: str
+    citations: list[dict[str, Any]]
+    insufficient: bool
+    blocked: bool
+    phi_redacted: bool
+    latency_ms: int
+    session_id: str
+    retrieval: dict[str, Any]
+
+
+class StatusResponse(BaseModel):
+    vector_store: str
+    pinecone_index: str
+    embedding_model: str
+    llm_model: str
+    corpus_documents: int
+    top_k: int
+    similarity_threshold: float
+
+
+@router.post("/ask", response_model=AskResponse)
+def ask_endpoint(req: AskRequest, user: User = Depends(require("chatbot:use"))) -> AskResponse:
     r = ask(req.query, user_id=user.user_id, user_role=user.role, session_id=req.session_id)
-    return {
-        "answer": r.answer,
-        "citations": r.citations,
-        "insufficient": r.insufficient,
-        "blocked": r.blocked,
-        "phi_redacted": r.phi_redacted,
-        "latency_ms": r.latency_ms,
-        "session_id": r.session_id,
-        "retrieval": r.retrieval,
-    }
+    return AskResponse(
+        answer=r.answer,
+        citations=r.citations,
+        insufficient=r.insufficient,
+        blocked=r.blocked,
+        phi_redacted=r.phi_redacted,
+        latency_ms=r.latency_ms,
+        session_id=r.session_id,
+        retrieval=r.retrieval,
+    )
 
 
-@router.get("/status")
-def status_endpoint(user: User = Depends(require("chatbot:use"))) -> dict:
+@router.get("/status", response_model=StatusResponse)
+def status_endpoint(user: User = Depends(require("chatbot:use"))) -> StatusResponse:
     idx = get_index()
-    return {
-        "vector_store": settings.vector_store,
-        "pinecone_index": settings.pinecone_index_name if settings.vector_store == "pinecone" else "",
-        "embedding_model": settings.openai_embed_model if settings.llm_enabled else "stub-hash",
-        "llm_model": settings.openai_model if settings.llm_enabled else "stub",
-        "corpus_documents": len(idx.docs),
-        "top_k": TOP_K,
-        "similarity_threshold": SIM_THRESHOLD,
-    }
+    return StatusResponse(
+        vector_store=settings.vector_store,
+        pinecone_index=settings.pinecone_index_name if settings.vector_store == "pinecone" else "",
+        embedding_model=settings.openai_embed_model if settings.llm_enabled else "stub-hash",
+        llm_model=settings.openai_model if settings.llm_enabled else "stub",
+        corpus_documents=len(idx.docs),
+        top_k=TOP_K,
+        similarity_threshold=SIM_THRESHOLD,
+    )

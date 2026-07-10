@@ -26,6 +26,7 @@ from app.nl2sql.validator import validate_sql
 from app.security.audit import write_audit
 
 ROW_CAP = 10_000
+PREVIEW_ROW_CAP = 200  # interactive /nl2sql/query response cap; CSV export keeps the full ROW_CAP
 TIMEOUT_S = 30
 MUTATION_PATTERNS = [
     r"\bdrop\s+table\b",
@@ -94,7 +95,14 @@ def _explicit_mutation_request(question: str) -> bool:
 
 
 def run_query(question: str, *, user_id: str = "anon", user_role: str = "da_analyst",
-              session_id: str | None = None) -> QueryResult:
+              session_id: str | None = None, preview: bool = False) -> QueryResult:
+    """Run the NL-to-SQL pipeline.
+
+    ``preview=True`` (used by the interactive /nl2sql/query endpoint) caps the
+    rows returned in the response to PREVIEW_ROW_CAP; the CSV export path
+    (preview=False, the default) keeps up to the full ROW_CAP so downloads
+    aren't truncated more aggressively than the documented hard cap.
+    """
     start = time.time()
     session_id = session_id or str(uuid.uuid4())
 
@@ -155,6 +163,9 @@ def run_query(question: str, *, user_id: str = "anon", user_role: str = "da_anal
                 action="answer", query_text=question, generated_sql=sql,
                 response_latency_ms=latency, session_id=session_id,
                 detail={"row_count": len(rows), "truncated": truncated, "attempts": attempts})
+    if preview and len(rows) > PREVIEW_ROW_CAP:
+        rows = rows[:PREVIEW_ROW_CAP]
+        truncated = True
     return QueryResult(ok=True, sql=sql, columns=columns, rows=rows, row_count=len(rows),
                        truncated=truncated, latency_ms=latency, attempts=attempts)
 
