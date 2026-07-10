@@ -35,11 +35,22 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # environment (set APP_ENV=production in real deployments — see .env.example)
+    app_env: str = "development"
+
     # security
     jwt_secret: str = "dev-insecure-change-me-0123456789-please"
     jwt_alg: str = "HS256"
     jwt_expire_minutes: int = 480
     phi_hmac_key: str = "dev-phi-hmac-key-change-me"
+    # unauthenticated /auth/token dev issuer (arch §2.7) — mints any role incl.
+    # admin. Fine for this public demo; a real deployment MUST set
+    # ENABLE_DEV_TOKEN=0 and front the API with its real IdP instead.
+    enable_dev_token: bool = True
+    # set true when running behind a reverse proxy/load balancer so the rate
+    # limiter keys on the real client IP (X-Forwarded-For) instead of the
+    # proxy's own address.
+    trust_proxy: bool = False
 
     # llm
     openai_api_key: str = ""
@@ -90,12 +101,33 @@ class Settings(BaseSettings):
             )
         return problems
 
+    def fail_if_insecure_in_production(self) -> None:
+        """Fail closed at startup if a production deploy still ships dev secrets."""
+        if self.app_env.lower() != "production":
+            return
+        problems = [
+            name for name, insecure in _INSECURE_DEFAULTS.items()
+            if getattr(self, name) == insecure
+        ]
+        if problems:
+            raise RuntimeError(
+                "APP_ENV=production but insecure default secrets are still in "
+                f"use: {', '.join(problems)}. Set them via .env / Key Vault."
+            )
+        if self.enable_dev_token:
+            raise RuntimeError(
+                "APP_ENV=production but ENABLE_DEV_TOKEN is still enabled; the "
+                "unauthenticated /auth/token issuer mints admin tokens. Set "
+                "ENABLE_DEV_TOKEN=0 in production."
+            )
+
 
 @lru_cache
 def get_settings() -> Settings:
     for d in (DATA_DIR, RAW_ZONE, CURATED_ZONE, MODEL_DIR):
         d.mkdir(parents=True, exist_ok=True)
     s = Settings()
+    s.fail_if_insecure_in_production()
     s.warn_if_insecure()
     return s
 
