@@ -9,39 +9,63 @@
     --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
     --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent2:#22c55e;
     --warn:#f59e0b; --danger:#ef4444;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.28);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.04);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
   }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  body { margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.5; }
+  .sr-only {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  a, button, select, input, textarea, [tabindex] {
+    transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+  }
+  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius:6px;
+  }
   header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  header h1 { font-size:18px; margin:0; font-weight:600; }
+  header h1 { font-size:20px; margin:0; font-weight:700; letter-spacing:-.01em; }
   header .sub { color:var(--muted); font-size:13px; }
   .auth { margin-left:auto; display:flex; align-items:center; gap:8px; }
   select, input, textarea, button { font:inherit; }
   select, input, textarea {
     background:var(--panel2); color:var(--text); border:1px solid var(--line);
-    border-radius:8px; padding:8px 10px;
+    border-radius:8px; padding:8px 10px; min-height:24px;
   }
   button {
     background:var(--accent); color:#06283d; border:none; border-radius:8px;
-    padding:8px 14px; font-weight:600; cursor:pointer;
+    padding:10px 14px; font-weight:600; cursor:pointer; min-height:24px;
   }
   button:hover { filter:brightness(1.08); }
-  button:disabled { opacity:.6; cursor:progress; filter:none; }
+  button:disabled, button[aria-disabled="true"] { opacity:.6; cursor:progress; filter:none; }
   button.ghost { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+  button.linklike {
+    background:transparent; color:var(--accent); border:none; text-decoration:underline;
+    font-size:12px; padding:6px 4px; margin-right:8px; font-weight:400; min-height:24px;
+  }
+  button.linklike:hover { filter:brightness(1.15); }
   .pill { font-size:12px; padding:3px 9px; border-radius:999px; background:var(--panel2); color:var(--muted); }
   .pill.on { background:rgba(34,197,94,.15); color:var(--accent2); }
   main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px 24px; max-width:1400px; margin:0 auto; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
-  .card h2 { margin:0 0 4px; font-size:15px; }
-  .card p.hint { margin:0 0 12px; color:var(--muted); font-size:12px; }
-  .row { display:flex; gap:8px; }
-  .row > input, .row > textarea { flex:1; }
+  .card {
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px;
+    box-shadow:var(--shadow-md); min-width:0;
+  }
+  .card h2 { margin:0 0 4px; font-size:16px; font-weight:600; }
+  .card p.hint { margin:0 0 12px; color:var(--muted); font-size:12.5px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  .row > input, .row > textarea { flex:1; min-width:0; }
   textarea { width:100%; resize:vertical; min-height:48px; }
-  .out { margin-top:12px; background:#0b1322; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:13px; max-height:340px; overflow:auto; }
+  .out { margin-top:12px; background:#0b1322; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:13px; max-height:340px; overflow:auto; box-shadow:var(--shadow-sm); }
   .muted { color:var(--muted); }
+  .num, code.sql, .metric .v, td.num { font-family:var(--mono); font-variant-numeric:tabular-nums; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th { color:var(--muted); position:sticky; top:0; background:#0b1322; }
+  td { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  th { color:var(--muted); position:sticky; top:0; background:#0b1322; font-family:inherit; }
   code.sql { display:block; background:#06101f; padding:8px; border-radius:8px; color:#7dd3fc; font-size:12px; margin-bottom:8px; white-space:pre-wrap; }
   .sev-P1 { color:var(--danger); font-weight:700; }
   .sev-P2 { color:var(--warn); font-weight:700; }
@@ -50,8 +74,7 @@
   .permsbar { margin:0 auto 4px; max-width:1100px; padding:8px 12px; }
   .err { color:var(--danger); }
   .ok { color:var(--accent2); }
-  .examples { margin-top:8px; }
-  .examples a { color:var(--accent); cursor:pointer; font-size:12px; margin-right:12px; text-decoration:underline; }
+  .examples { margin-top:8px; display:flex; flex-wrap:wrap; }
   .tech { margin:0 0 12px; display:flex; flex-wrap:wrap; gap:6px; }
   .tech .t { font-size:10.5px; letter-spacing:.2px; padding:2px 7px; border-radius:6px;
              background:var(--panel2); border:1px solid var(--line); color:var(--accent); }
@@ -61,13 +84,29 @@
   .flow { display:grid; grid-template-columns:repeat(6, minmax(110px, 1fr)); gap:8px; margin-top:12px; }
   .flow span { background:#0b1322; border:1px solid var(--line); border-radius:8px; padding:8px; font-size:12px; text-align:center; color:var(--text); }
   .status-grid { display:grid; grid-template-columns:repeat(4, minmax(120px, 1fr)); gap:8px; margin-top:12px; }
-  .metric { background:#0b1322; border:1px solid var(--line); border-radius:8px; padding:10px; min-height:58px; }
+  .metric { background:#0b1322; border:1px solid var(--line); border-radius:8px; padding:10px; min-height:58px; box-shadow:var(--shadow-sm); }
   .metric .k { display:block; color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; }
   .metric .v { display:block; margin-top:4px; font-size:13px; color:var(--text); overflow-wrap:anywhere; }
   .inspector { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
   .inspector .title { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
   .span2 { grid-column:1 / -1; }
+  .fc-figure { font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:28px; font-weight:700; letter-spacing:-.01em; }
+  .fc-ci-wrap { margin-top:10px; }
+  .fc-ci-wrap svg { display:block; max-width:100%; height:auto; }
+  .fc-ci-caption { color:var(--muted); font-size:11.5px; margin-top:4px; font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  .skeleton { background:linear-gradient(90deg, #10192c 25%, #16213a 37%, #10192c 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:6px; }
+  .skeleton-line { height:12px; margin-bottom:8px; }
+  .skeleton-line:last-child { margin-bottom:0; width:60%; }
+  @keyframes shimmer { 0% { background-position:100% 50%; } 100% { background-position:0 50%; } }
   @media(max-width:900px){ main{ grid-template-columns:1fr; } .flow,.status-grid{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:480px){
+    main{ padding:12px; }
+    header{ padding:14px 16px; }
+    .flow,.status-grid{ grid-template-columns:1fr; }
+    .row{ flex-direction:column; }
+    .row > input, .row > textarea, .row > select, .row > button { width:100%; }
+    table{ display:block; overflow-x:auto; }
+  }
 </style>
 </head>
 <body>
@@ -83,14 +122,14 @@
     </div>
   </div>
   <div class="auth">
-    <span class="muted" style="font-size:12px;">role</span>
+    <label for="role" class="muted" style="font-size:12px;">role</label>
     <select id="role">
       <option value="da_analyst">da_analyst</option>
       <option value="collections">collections</option>
       <option value="admin">admin</option>
     </select>
     <button id="loginBtn">Sign in</button>
-    <span id="authState" class="pill">signed out</span>
+    <span id="authState" class="pill" role="status" aria-live="polite">signed out</span>
   </div>
 </header>
 
@@ -114,6 +153,7 @@
       <span>5. Generate answer</span>
       <span>6. Scan + audit</span>
     </div>
+    <label for="chatQ" class="sr-only">Finance question</label>
     <div class="row">
       <textarea id="chatQ" placeholder="e.g. How is Round Rock performing?"></textarea>
     </div>
@@ -121,11 +161,11 @@
       <button id="chatBtn">Ask</button>
     </div>
     <div class="examples">
-      <a data-chat="How is Round Rock performing?">facility example</a>
-      <a data-chat="How is Attorney Johnson performing?">attorney example</a>
-      <a data-chat="Show me patient John Doe's balance">PHI block (should refuse)</a>
+      <button type="button" class="linklike" data-chat="How is Round Rock performing?">facility example</button>
+      <button type="button" class="linklike" data-chat="How is Attorney Johnson performing?">attorney example</button>
+      <button type="button" class="linklike" data-chat="Show me patient John Doe's balance">PHI block (should refuse)</button>
     </div>
-    <div id="chatOut" class="out muted">Ask a finance question to see the answer, citations, retrieval scores, and safety status.</div>
+    <div id="chatOut" class="out muted" role="status" aria-live="polite">Ask a finance question to see the answer, citations, retrieval scores, and safety status.</div>
   </section>
 
   <!-- NL to SQL -->
@@ -137,6 +177,7 @@
       <span class="t">LLM/stub SQL gen</span><span class="t">sqlglot validation</span>
       <span class="t">Read-only SQLite</span><span class="t">Row cap + timeout</span>
     </div>
+    <label for="sqlQ" class="sr-only">Natural-language database question</label>
     <div class="row">
       <textarea id="sqlQ" placeholder="e.g. top 10 collections by attorney"></textarea>
     </div>
@@ -145,12 +186,12 @@
       <button id="csvBtn" class="ghost">Download CSV</button>
     </div>
     <div class="examples">
-      <a data-sql="top 10 collections by attorney">top 10 collections by attorney</a>
-      <a data-sql="top 10 attorneys by 180+ aging bucket">180+ aging</a>
-      <a data-sql="count of unpaid visits by facility">unpaid visits</a>
-      <a data-sql="DROP TABLE collections">unsafe (should reject)</a>
+      <button type="button" class="linklike" data-sql="top 10 collections by attorney">top 10 collections by attorney</button>
+      <button type="button" class="linklike" data-sql="top 10 attorneys by 180+ aging bucket">180+ aging</button>
+      <button type="button" class="linklike" data-sql="count of unpaid visits by facility">unpaid visits</button>
+      <button type="button" class="linklike" data-sql="DROP TABLE collections">unsafe (should reject)</button>
     </div>
-    <div id="sqlOut" class="out muted">No query run yet.</div>
+    <div id="sqlOut" class="out muted" role="status" aria-live="polite">No query run yet.</div>
   </section>
 
   <!-- Alerts -->
@@ -165,7 +206,7 @@
     <div class="row">
       <button id="alertBtn">Load alerts</button>
     </div>
-    <div id="alertOut" class="out muted">Not loaded.</div>
+    <div id="alertOut" class="out muted" role="status" aria-live="polite">Not loaded.</div>
   </section>
 
   <!-- Forecast -->
@@ -178,12 +219,15 @@
       <span class="t">30/60/90d horizons</span><span class="t">SQLite forecasts</span><span class="t">80% CI</span>
     </div>
     <div class="row">
+      <label for="fcType" class="sr-only">Entity type</label>
       <select id="fcType">
         <option value="facility">facility</option>
         <option value="attorney">attorney</option>
         <option value="case_type">case_type</option>
       </select>
+      <label for="fcEntity" class="sr-only">Entity</label>
       <select id="fcEntity"><option>—</option></select>
+      <label for="fcHorizon" class="sr-only">Forecast horizon</label>
       <select id="fcHorizon">
         <option value="30">30d</option>
         <option value="60">60d</option>
@@ -191,7 +235,7 @@
       </select>
       <button id="fcBtn">Get forecast</button>
     </div>
-    <div id="fcOut" class="out muted">No forecast loaded.</div>
+    <div id="fcOut" class="out muted" role="status" aria-live="polite">No forecast loaded.</div>
   </section>
 
   <!-- Admin / MLOps (admin role only) -->
@@ -204,21 +248,24 @@
       <span class="t">Feature freshness SLA</span><span class="t">RBAC: admin-only</span>
     </div>
     <div class="row">
+      <label for="admType" class="sr-only">Entity type</label>
       <select id="admType">
         <option value="facility">facility</option>
         <option value="attorney">attorney</option>
         <option value="case_type">case_type</option>
       </select>
+      <label for="admEntity" class="sr-only">Entity</label>
       <select id="admEntity"><option>—</option></select>
       <button id="admModelBtn">Load registry</button>
       <button id="admFreshBtn" class="ghost">Feature freshness</button>
     </div>
     <div class="row" style="margin-top:8px;">
+      <label for="admVersion" class="sr-only">Model version to roll back to</label>
       <input id="admVersion" type="number" min="1" placeholder="version"
              style="width:90px;background:var(--panel2);color:inherit;border:1px solid var(--line);border-radius:6px;padding:6px 8px;"/>
       <button id="admRollbackBtn" class="ghost">Roll back to version</button>
     </div>
-    <div id="admOut" class="out muted">Admin tools — load the model registry or feature freshness.</div>
+    <div id="admOut" class="out muted" role="status" aria-live="polite">Admin tools — load the model registry or feature freshness.</div>
   </section>
 </main>
 
@@ -240,6 +287,38 @@ function headers() {
   return h;
 }
 function money(n){ return (n==null) ? "—" : "$" + Number(n).toLocaleString(undefined,{maximumFractionDigits:0}); }
+
+// Render output into a live region and toggle its role so screen readers treat
+// errors as assertive alerts while normal updates stay as polite status.
+function setOut(el, html, isError){
+  el.innerHTML = html;
+  el.setAttribute("role", isError ? "alert" : "status");
+}
+function skeleton(lines){
+  lines = lines || 3;
+  let html = "<div>";
+  for (let i = 0; i < lines; i++) html += "<div class='skeleton skeleton-line'></div>";
+  return html + "</div>";
+}
+
+// Lightweight inline SVG showing the predicted point within its 80% CI band,
+// so the confidence interval is a visual error bar rather than plain text.
+function ciSvg(predicted, lo, hi){
+  const w = 320, h = 60, pad = 14;
+  const min = Math.min(lo, predicted), max = Math.max(hi, predicted);
+  const span = (max - min) || 1;
+  const x = v => pad + ((v - min) / span) * (w - pad * 2);
+  const y = h / 2;
+  const xLo = x(lo), xHi = x(hi), xP = x(predicted);
+  return "<svg viewBox='0 0 " + w + " " + h + "' role='img' aria-label='80% confidence interval from " +
+    esc(money(lo)) + " to " + esc(money(hi)) + ", predicted " + esc(money(predicted)) + "'>" +
+    "<line x1='" + pad + "' y1='" + y + "' x2='" + (w - pad) + "' y2='" + y + "' stroke='#334155' stroke-width='1'/>" +
+    "<rect x='" + xLo + "' y='" + (y - 8) + "' width='" + (xHi - xLo) + "' height='16' rx='4' fill='#38bdf8' fill-opacity='0.18' stroke='#38bdf8' stroke-opacity='0.4'/>" +
+    "<line x1='" + xLo + "' y1='" + (y - 10) + "' x2='" + xLo + "' y2='" + (y + 10) + "' stroke='#38bdf8' stroke-width='1.5'/>" +
+    "<line x1='" + xHi + "' y1='" + (y - 10) + "' x2='" + xHi + "' y2='" + (y + 10) + "' stroke='#38bdf8' stroke-width='1.5'/>" +
+    "<circle cx='" + xP + "' cy='" + y + "' r='5' fill='#22c55e'/>" +
+    "</svg>";
+}
 
 // Show/hide each panel by the capability it needs, and surface the signed-in
 // role's permissions so account types are visibly different. role=null resets
@@ -300,6 +379,7 @@ async function login() {
     btn.disabled = false;
     btn.textContent = "Sign in";
     loggingIn = false;
+    btn.focus();
   }
 }
 
@@ -320,15 +400,15 @@ function renderRetrieval(d) {
 }
 
 async function ask() {
-  if(!token) return need();
-  $("chatOut").innerHTML = "<span class='muted'>Thinking...</span>";
+  if(!token) return need($("chatOut"));
+  setOut($("chatOut"), skeleton(3), false);
   const r = await fetch(API + "/chatbot/ask", {
     method:"POST", headers:headers(),
     body: JSON.stringify({ query: $("chatQ").value })
   });
   const d = await r.json();
   if (d.blocked) {
-    $("chatOut").innerHTML = "<span class='err'>Blocked (PHI request)</span><br>" + esc(d.answer) + renderRetrieval(d);
+    setOut($("chatOut"), "<span class='err'>Blocked (PHI request)</span><br>" + esc(d.answer) + renderRetrieval(d), true);
     return;
   }
   let html = esc(d.answer);
@@ -346,19 +426,19 @@ async function ask() {
   }
   html += renderRetrieval(d);
   html += "<div class='muted' style='margin-top:8px'>"+d.latency_ms+" ms</div>";
-  $("chatOut").innerHTML = html;
+  setOut($("chatOut"), html, false);
 }
 
 async function runSql() {
-  if(!token) return need();
-  $("sqlOut").innerHTML = "<span class='muted'>Running…</span>";
+  if(!token) return need($("sqlOut"));
+  setOut($("sqlOut"), skeleton(3), false);
   const r = await fetch(API + "/nl2sql/query", {
     method:"POST", headers:headers(),
     body: JSON.stringify({ question: $("sqlQ").value })
   });
   const d = await r.json();
   if (!d.ok) {
-    $("sqlOut").innerHTML = "<code class='sql'>"+esc(d.sql||"(none)")+"</code><span class='err'>"+esc(d.error)+"</span>";
+    setOut($("sqlOut"), "<code class='sql'>"+esc(d.sql||"(none)")+"</code><span class='err'>"+esc(d.error)+"</span>", true);
     return;
   }
   let html = "<code class='sql'>"+esc(d.sql)+"</code>";
@@ -368,16 +448,16 @@ async function runSql() {
     html += d.rows.map(row=>"<tr>"+row.map(v=>"<td>"+esc(fmt(v))+"</td>").join("")+"</tr>").join("");
     html += "</tbody></table>";
   }
-  $("sqlOut").innerHTML = html;
+  setOut($("sqlOut"), html, false);
 }
 
 async function downloadCsv() {
-  if(!token) return need();
+  if(!token) return need($("sqlOut"));
   const r = await fetch(API + "/nl2sql/export", {
     method:"POST", headers:headers(),
     body: JSON.stringify({ question: $("sqlQ").value })
   });
-  if (!r.ok) { alert("Query failed — run it first to see the error."); return; }
+  if (!r.ok) { setOut($("sqlOut"), "<span class='err'>Query failed — run it first to see the error.</span>", true); return; }
   const blob = await r.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -386,17 +466,17 @@ async function downloadCsv() {
 }
 
 async function loadAlerts() {
-  if(!token) return need();
-  $("alertOut").innerHTML = "<span class='muted'>Loading…</span>";
+  if(!token) return need($("alertOut"));
+  setOut($("alertOut"), skeleton(3), false);
   const r = await fetch(API + "/alerts", { headers:headers() });
-  if (r.status === 403) { $("alertOut").innerHTML = "<span class='err'>403 — role lacks alerts:read</span>"; return; }
+  if (r.status === 403) { setOut($("alertOut"), "<span class='err'>403 — role lacks alerts:read</span>", true); return; }
   const d = await r.json();
-  if (!d.count) { $("alertOut").innerHTML = "<span class='muted'>No alerts.</span>"; return; }
-  $("alertOut").innerHTML = d.alerts.map(a =>
+  if (!d.count) { setOut($("alertOut"), "<span class='muted'>No alerts.</span>", false); return; }
+  setOut($("alertOut"), d.alerts.map(a =>
     "<div style='margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #334155'>"+
     "<span class='sev-"+esc(a.severity)+"'>"+esc(a.severity)+"</span> · <b>"+esc(a.entity_id)+"</b> · "+esc(a.metric)+
-    "<br><span class='muted'>expected "+money(a.expected)+" · actual "+money(a.actual)+" · "+esc(a.detector)+"</span>"+
-    "<br>"+esc(a.driver_narrative||"")+"</div>").join("");
+    "<br><span class='muted num'>expected "+money(a.expected)+" · actual "+money(a.actual)+" · "+esc(a.detector)+"</span>"+
+    "<br>"+esc(a.driver_narrative||"")+"</div>").join(""), false);
 }
 
 async function loadForecastEntities() {
@@ -417,13 +497,13 @@ async function loadAdminEntities() {
 }
 function admModelName() { return "collections_" + $("admType").value + "_" + $("admEntity").value; }
 function admErr(r) {
-  $("admOut").innerHTML = "<span class='err'>" + r.status + " — " +
-    (r.status === 403 ? "admin only" : "request failed") + "</span>";
+  setOut($("admOut"), "<span class='err'>" + r.status + " — " +
+    (r.status === 403 ? "admin only" : "request failed") + "</span>", true);
 }
 
 async function admLoadModel() {
-  if (!token) return need();
-  $("admOut").innerHTML = "<span class='muted'>Loading…</span>";
+  if (!token) return need($("admOut"));
+  setOut($("admOut"), skeleton(3), false);
   const r = await fetch(API + "/admin/models/" + encodeURIComponent(admModelName()), { headers: headers() });
   if (!r.ok) return admErr(r);
   const d = await r.json();
@@ -434,15 +514,15 @@ async function admLoadModel() {
     : "none registered";
   const versions = (d.versions || []).map(v =>
     "<span class='chip'>v" + v.version + " " + esc(v.stage) + "</span>").join(" ") || "—";
-  $("admOut").innerHTML =
+  setOut($("admOut"),
     "<div><b>" + esc(d.model_name) + "</b></div>" +
-    "<div class='muted' style='margin-top:4px'>champion: " + champ + "</div>" +
-    "<div style='margin-top:8px'>versions: " + versions + "</div>";
+    "<div class='muted num' style='margin-top:4px'>champion: " + champ + "</div>" +
+    "<div style='margin-top:8px'>versions: " + versions + "</div>", false);
 }
 
 async function admLoadFreshness() {
-  if (!token) return need();
-  $("admOut").innerHTML = "<span class='muted'>Loading…</span>";
+  if (!token) return need($("admOut"));
+  setOut($("admOut"), skeleton(3), false);
   const r = await fetch(API + "/admin/freshness", { headers: headers() });
   if (!r.ok) return admErr(r);
   const d = await r.json();
@@ -450,36 +530,37 @@ async function admLoadFreshness() {
     "<div>" + esc(f.feature_group) + " · " + esc(f.last_updated) + " · " + f.row_count + " rows</div>").join("")
     || "<div class='muted'>no feature groups</div>";
   const stale = (d.stale_groups || []).length ? d.stale_groups.map(esc).join(", ") : "none";
-  $("admOut").innerHTML = rows + "<div class='muted' style='margin-top:8px'>stale groups: " + esc(stale) + "</div>";
+  setOut($("admOut"), rows + "<div class='muted' style='margin-top:8px'>stale groups: " + esc(stale) + "</div>", false);
 }
 
 async function admRollback() {
-  if (!token) return need();
+  if (!token) return need($("admOut"));
   const v = $("admVersion").value;
-  if (!v) { $("admOut").innerHTML = "<span class='err'>enter a version number</span>"; return; }
+  if (!v) { setOut($("admOut"), "<span class='err'>enter a version number</span>", true); return; }
   const r = await fetch(API + "/admin/models/" + encodeURIComponent(admModelName()) + "/rollback/" + encodeURIComponent(v),
     { method: "POST", headers: headers() });
   if (!r.ok) return admErr(r);
   const d = await r.json();
-  $("admOut").innerHTML = "<span class='ok'>Promoted " + esc(d.model_name) +
-    " → v" + esc(d.production.version) + " (" + esc(d.production.stage) + ")</span>";
+  setOut($("admOut"), "<span class='ok'>Promoted " + esc(d.model_name) +
+    " → v" + esc(d.production.version) + " (" + esc(d.production.stage) + ")</span>", false);
 }
 
 async function getForecast() {
-  if(!token) return need();
+  if(!token) return need($("fcOut"));
   const type = $("fcType").value, ent = $("fcEntity").value, h = $("fcHorizon").value;
-  $("fcOut").innerHTML = "<span class='muted'>Loading…</span>";
+  setOut($("fcOut"), skeleton(3), false);
   const r = await fetch(API + "/forecasts/"+type+"/"+ent+"?horizon="+h, { headers:headers() });
-  if (!r.ok) { $("fcOut").innerHTML = "<span class='err'>"+r.status+" — no forecast</span>"; return; }
+  if (!r.ok) { setOut($("fcOut"), "<span class='err'>"+r.status+" — no forecast</span>", true); return; }
   const d = await r.json();
-  $("fcOut").innerHTML =
-    "<div style='font-size:22px;font-weight:700'>"+money(d.predicted)+"</div>"+
+  setOut($("fcOut"),
+    "<div class='fc-figure'>"+money(d.predicted)+"</div>"+
     "<div class='muted'>"+h+"-day predicted collections for "+esc(type)+" "+esc(ent)+"</div>"+
-    "<div style='margin-top:8px'>80% CI: "+money(d.ci_lower)+" – "+money(d.ci_upper)+"</div>"+
-    "<div class='muted' style='margin-top:4px'>forecast date: "+esc(d.forecast_date||"")+"</div>";
+    "<div class='fc-ci-wrap'>"+ciSvg(d.predicted, d.ci_lower, d.ci_upper)+
+    "<div class='fc-ci-caption'>80% CI: "+money(d.ci_lower)+" – "+money(d.ci_upper)+"</div></div>"+
+    "<div class='muted' style='margin-top:4px'>forecast date: "+esc(d.forecast_date||"")+"</div>", false);
 }
 
-function need(){ alert("Click 'Sign in' first."); }
+function need(el){ setOut(el, "<span class='err'>Click 'Sign in' first.</span>", true); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function fmt(v){ return (typeof v==="number" && !Number.isInteger(v)) ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v; }
 
