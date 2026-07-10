@@ -69,6 +69,17 @@ class LLMClient:
             log.warning("llm embed failed; using stub", extra={"error": str(e)})
             return [self._stub_embed(t) for t in texts]
 
+    def embed_one(self, text: str) -> list[float]:
+        """Embed a single string, raising on provider failure (no stub fallback).
+
+        Unlike embed(), this never swallows a failure into a stub vector. It is
+        the "real-or-raise" path used by the query-embedding cache so that only
+        genuine provider results are ever cached — a transient failure must not
+        be memoised as if it were a real embedding.
+        """
+        resp = self._client.embeddings.create(model=self.embed_model, input=[text])
+        return resp.data[0].embedding
+
     # --- deterministic fallbacks -------------------------------------------
     def _stub_complete(self, system: str, user: str) -> str:
         # For NL-to-SQL the caller wraps prompts so the stub can detect intent.

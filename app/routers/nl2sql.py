@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.nl2sql.executor import run_query, to_csv
+from app.nl2sql.executor import iter_csv, run_query
 from app.security.auth import User, require
 
 router = APIRouter(prefix="/nl2sql", tags=["nl2sql"])
@@ -54,13 +54,13 @@ def query(req: QueryRequest, user: User = Depends(require("nl2sql:use"))) -> Nl2
     )
 
 
-@router.post("/export", response_class=PlainTextResponse)
-def export(req: QueryRequest, user: User = Depends(require("nl2sql:use"))) -> PlainTextResponse:
+@router.post("/export")
+def export(req: QueryRequest, user: User = Depends(require("nl2sql:use"))):
     r = run_query(req.question, user_id=user.user_id, user_role=user.role,
                   session_id=req.session_id)
     if not r.ok:
         return PlainTextResponse(f"# error: {r.error}\n", status_code=400)
-    return PlainTextResponse(
-        to_csv(r), media_type="text/csv",
+    return StreamingResponse(
+        iter_csv(r), media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=query_result.csv"},
     )

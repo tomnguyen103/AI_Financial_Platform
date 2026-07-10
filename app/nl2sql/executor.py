@@ -18,6 +18,7 @@ import re
 import threading
 import time
 import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from app.db import get_readonly_conn
@@ -87,6 +88,29 @@ def to_csv(result: QueryResult) -> str:
         writer.writerow(result.columns)
     writer.writerows(result.rows)
     return buf.getvalue()
+
+
+def iter_csv(result: QueryResult) -> Iterator[str]:
+    """Yield a successful result as CSV row-by-row (header first, then rows).
+
+    Streaming the export keeps a large (up to ROW_CAP) download from being fully
+    materialised in memory; each yielded chunk is a single serialised CSV row.
+    """
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+
+    def _flush() -> str:
+        chunk = buf.getvalue()
+        buf.seek(0)
+        buf.truncate(0)
+        return chunk
+
+    if result.columns:
+        writer.writerow(result.columns)
+        yield _flush()
+    for row in result.rows:
+        writer.writerow(row)
+        yield _flush()
 
 
 def _explicit_mutation_request(question: str) -> bool:
