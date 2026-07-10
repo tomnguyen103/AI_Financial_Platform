@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.nl2sql.executor import run_query, to_csv
 from app.security.auth import User, require
@@ -19,7 +19,9 @@ router = APIRouter(prefix="/nl2sql", tags=["nl2sql"])
 
 
 class QueryRequest(BaseModel):
-    question: str
+    # Bound the free-text field so an oversized body can't drive expensive SQL
+    # generation / validation work before the rate limiter trips.
+    question: str = Field(..., min_length=1, max_length=2000)
     session_id: str | None = None
 
 
