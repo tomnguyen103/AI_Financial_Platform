@@ -50,7 +50,7 @@ def list_entities(entity_type: str) -> list[str]:
 
 def evaluate(series: pd.Series, horizon: int, folds: int = 4) -> dict:
     """Walk-forward backtest of the H-day-ahead total (data design §10.1)."""
-    errors, actuals, in_ci = [], [], []
+    errors, signed_errors, actuals, in_ci = [], [], [], []
     n = len(series)
     if n < horizon * 2 + MIN_HISTORY_DAYS:
         folds = max(1, (n - MIN_HISTORY_DAYS) // horizon - 1)
@@ -65,15 +65,16 @@ def evaluate(series: pd.Series, horizon: int, folds: int = 4) -> dict:
         m = SeasonalTrendForecaster().fit(train)
         pred = m.predict_horizon(horizon)
         errors.append(abs(pred["predicted"] - actual) / actual)
+        signed_errors.append((pred["predicted"] - actual) / actual)
         actuals.append(actual)
         in_ci.append(pred["ci_lower"] <= actual <= pred["ci_upper"])
-        # bias accumulation
     if not errors:
         return {"mape": None, "rmse": None, "coverage": None, "bias": None, "folds": 0}
     mape = float(np.mean(errors))
     coverage = float(np.mean(in_ci))
+    bias = float(np.mean(signed_errors))
     return {"mape": mape, "rmse": None, "coverage": coverage,
-            "bias": float(np.mean(errors)), "folds": len(errors)}
+            "bias": bias, "folds": len(errors)}
 
 
 def train_and_register(entity_type: str = "facility") -> list[dict]:
@@ -99,23 +100,28 @@ def train_and_register(entity_type: str = "facility") -> list[dict]:
 
 
 def generate_forecasts(entity_type: str = "facility") -> int:
-    """Produce + persist 30/60/90 forecasts for each entity's champion model."""
+    """Produce + persist 30/60/90 forecasts for each entity's champion model.
+
+    The delete of the prior batch and every insert for the new batch share a
+    single transaction so a mid-run crash cannot leave forecasts partially
+    deleted (i.e. no window where the table has neither the old nor the new
+    batch for this entity_type/forecast_date).
+    """
     today = dt.date(2026, 5, 28)
     written = 0
     with tx() as conn:
         conn.execute("DELETE FROM forecasts WHERE entity_type=? AND forecast_date=?",
                      (entity_type, today.isoformat()))
-    for entity_id in list_entities(entity_type):
-        model_name = f"collections_{entity_type}_{entity_id}"
-        champ = registry.champion(model_name)
-        if not champ:
-            continue
-        art = registry.load_artifact(champ["artifact_path"])
-        model = SeasonalTrendForecaster.from_state(art["state"])
-        for h in HORIZONS:
-            pred = model.predict_horizon(h)
-            target = (today + dt.timedelta(days=h)).isoformat()
-            with tx() as conn:
+        for entity_id in list_entities(entity_type):
+            model_name = f"collections_{entity_type}_{entity_id}"
+            champ = registry.champion(model_name)
+            if not champ:
+                continue
+            art = registry.load_artifact(champ["artifact_path"])
+            model = SeasonalTrendForecaster.from_state(art["state"])
+            for h in HORIZONS:
+                pred = model.predict_horizon(h)
+                target = (today + dt.timedelta(days=h)).isoformat()
                 conn.execute(
                     """INSERT INTO forecasts (entity_type, entity_id, horizon_days, forecast_date,
                          target_date, predicted, ci_lower, ci_upper, p50, p80, p95,
@@ -126,7 +132,7 @@ def generate_forecasts(entity_type: str = "facility") -> int:
                      pred["p50"], pred["p80"], pred["p95"], model_name,
                      champ["version"], _utcnow(), _utcnow()),
                 )
-            written += 1
+                written += 1
     return written
 
 
