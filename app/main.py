@@ -128,6 +128,7 @@ app.add_middleware(
 # is N x _RATE_MAX; swap for a shared store (Redis) when scaling horizontally.
 _RATE_MAX = 120          # requests
 _RATE_WINDOW = 60.0      # seconds
+_HITS_SWEEP_THRESHOLD = 10_000   # sweep drained buckets once the table exceeds this
 _hits: dict[str, deque] = defaultdict(deque)
 
 
@@ -151,9 +152,18 @@ async def rate_limit_and_log(request: Request, call_next):
         resp = JSONResponse(status_code=429, content={"error": "rate limit exceeded"})
         resp.headers.update(_SECURITY_HEADERS)
         return resp
-    if not window:
-        del _hits[client]
-    _hits[client].append(now)
+    window.append(now)
+    # Opportunistic sweep: once the table grows large, drop buckets that have
+    # fully drained so _hits can't grow without bound across many distinct or
+    # rotating client IPs (proxies, bots, IPv6 churn).
+    if len(_hits) > _HITS_SWEEP_THRESHOLD:
+        cutoff = now - _RATE_WINDOW
+        for ip in list(_hits):
+            w = _hits[ip]
+            while w and w[0] <= cutoff:
+                w.popleft()
+            if not w:
+                del _hits[ip]
 
     req_id = str(uuid.uuid4())[:8]
     token = request_id_var.set(req_id)
