@@ -12,8 +12,10 @@ router = APIRouter(prefix="/alerts", tags=["alerts"])
 @router.get("")
 def get_alerts(severity: str | None = Query(None),
                status: str | None = Query(None),
+               limit: int = Query(100, ge=1, le=500),
+               offset: int = Query(0, ge=0),
                user: User = Depends(require("alerts:read"))) -> dict:
-    rows = list_alerts(severity=severity, status=status)
+    rows = list_alerts(severity=severity, status=status, limit=limit, offset=offset)
     return {"count": len(rows), "alerts": rows}
 
 

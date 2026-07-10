@@ -60,21 +60,34 @@ def forecast_deviation(entity_type: str, entity_id: str) -> list[Finding]:
 
 
 def cusum(entity_type: str, entity_id: str) -> list[Finding]:
-    """CUSUM on z-scored daily collections (data design §5.1)."""
+    """CUSUM on z-scored daily collections (data design §5.1).
+
+    The baseline mean/std are estimated from a REFERENCE window that *precedes*
+    the detection window, so a sustained shift inside the detection window does
+    not contaminate its own baseline (which would mask the very drift we want to
+    flag). Fall back to all prior history if the reference window is too short.
+    """
     series = daily_collections(entity_type, entity_id)
     th = thresholds_for(entity_id)["cusum"]
     window = int(th["window"])
     if len(series) < window + 10:
         return []
-    recent = series.iloc[-window:]
-    mu, sigma = float(recent.mean()), float(recent.std())
+    detect = series.iloc[-window:]
+    # Reference precedes the detection window; degrade to all prior history if
+    # that slice is too short, then bail cleanly if there is still too little.
+    ref = series.iloc[-2 * window:-window]
+    if len(ref) < 10:
+        ref = series.iloc[:-window]
+    if len(ref) < 10:
+        return []
+    mu, sigma = float(ref.mean()), float(ref.std())
     if sigma == 0:
         return []
-    z = (series.values - mu) / sigma
+    z = (detect.values - mu) / sigma
     k = float(th["k"])
     s_neg = 0.0
     min_s = 0.0
-    for val in z[-window:]:
+    for val in z:
         s_neg = min(0.0, s_neg + val + k)  # accumulate downward shifts
         min_s = min(min_s, s_neg)
     magnitude = abs(min_s)

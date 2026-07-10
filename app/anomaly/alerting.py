@@ -21,8 +21,11 @@ from app.config import settings
 from app.db import tx
 from app.features import store
 from app.forecasting.service import list_entities
+from app.logging_config import get_logger
 from app.security.audit import log_phi_detection, write_audit
 from app.security.phi import scan_output
+
+log = get_logger(__name__)
 
 
 def _utcnow() -> str:
@@ -81,9 +84,15 @@ def _deliver(payload: dict) -> None:
     text = format_slack(payload)
     if settings.slack_webhook_url:
         try:
-            httpx.post(settings.slack_webhook_url, json={"text": text}, timeout=5)
-        except Exception:
-            pass  # delivery failure must not crash the nightly run; alert is persisted
+            resp = httpx.post(settings.slack_webhook_url, json={"text": text}, timeout=5)
+            resp.raise_for_status()
+        except Exception as e:  # noqa: BLE001
+            # Delivery failure must not crash the nightly run (alert is already
+            # persisted), but it must NOT be silent either — log it for ops.
+            log.warning("slack delivery failed",
+                        extra={"alert_id": payload.get("alert_id"),
+                               "entity_id": payload.get("entity_id"),
+                               "error": str(e)})
 
 
 def format_slack(p: dict) -> str:
@@ -138,7 +147,8 @@ def acknowledge(alert_id: str, user_id: str) -> bool:
         return cur.rowcount > 0
 
 
-def list_alerts(severity: str | None = None, status: str | None = None) -> list[dict]:
+def list_alerts(severity: str | None = None, status: str | None = None,
+                limit: int = 100, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM alerts WHERE 1=1"
     params: list = []
     if severity:
@@ -147,7 +157,8 @@ def list_alerts(severity: str | None = None, status: str | None = None) -> list[
     if status:
         sql += " AND status=?"
         params.append(status)
-    sql += " ORDER BY created_at DESC"
+    sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([int(limit), int(offset)])
     with tx() as conn:
         return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
