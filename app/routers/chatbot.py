@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.rag.chatbot import ask
@@ -15,7 +15,9 @@ router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 
 
 class AskRequest(BaseModel):
-    query: str
+    # Bound the free-text field so a huge body can't drive unbounded regex PHI
+    # scanning / corpus search / LLM token cost before the rate limiter trips.
+    query: str = Field(..., min_length=1, max_length=2000)
     session_id: str | None = None
 
 
