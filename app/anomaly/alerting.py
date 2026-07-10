@@ -32,12 +32,31 @@ def _utcnow() -> str:
     return dt.datetime.now(dt.UTC).isoformat()
 
 
+def _settlement_online_features() -> dict[str, dict]:
+    """Latest settlement_pipeline feature vector for every entity in ONE query.
+
+    Replaces the previous N+1 pattern (list_entities + a per-entity
+    get_online_features call, each opening its own connection). Returns
+    {entity_key: features_dict} using the newest event_date per entity.
+    """
+    sql = (
+        "SELECT entity_key, features_json FROM feature_values fv "
+        "WHERE feature_group='settlement_pipeline' "
+        "AND event_date = (SELECT MAX(event_date) FROM feature_values fv2 "
+        "                  WHERE fv2.feature_group='settlement_pipeline' "
+        "                  AND fv2.entity_key = fv.entity_key)"
+    )
+    with tx() as conn:
+        rows = conn.execute(sql).fetchall()
+    return {r["entity_key"]: json.loads(r["features_json"]) for r in rows}
+
+
 def _driver_narrative(facility_id: str) -> str:
     """Grounded explanation from feature store signals (no LLM)."""
     signals: list[tuple[float, str]] = []
     # Settlement velocity across attorneys at this facility's case types.
-    for ek in store.list_entities("settlement_pipeline"):
-        fv = store.get_online_features("settlement_pipeline", ek)
+    # Batched: one query builds the {entity_key: features} lookup below.
+    for ek, fv in _settlement_online_features().items():
         if fv and fv.get("settlement_velocity_change_30d") is not None:
             vel = fv["settlement_velocity_change_30d"]
             if vel < -0.15:
