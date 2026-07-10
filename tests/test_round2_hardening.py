@@ -1,4 +1,4 @@
-"""Round-2 A+ hardening: request-body length bounds + query-embedding cache."""
+"""Round-2 A+ hardening: request-body length bounds on free-text fields."""
 from __future__ import annotations
 
 import pytest
@@ -23,15 +23,3 @@ def test_nl2sql_question_rejects_oversized_body():
 def test_reasonable_bodies_accepted():
     assert AskRequest(query="How is Round Rock performing?").query
     assert QueryRequest(question="top 10 collections by attorney").question
-
-
-def test_query_embedding_is_cached():
-    from app.rag.vector_store import _embed_query
-
-    _embed_query.cache_clear()
-    a = _embed_query("How is Round Rock performing?")
-    b = _embed_query("How is Round Rock performing?")
-    assert a == b
-    info = _embed_query.cache_info()
-    assert info.hits >= 1          # second call served from cache
-    assert isinstance(a, tuple)    # hashable/cacheable embedding

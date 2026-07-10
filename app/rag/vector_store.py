@@ -6,24 +6,12 @@ Production portfolio deployments can switch to Pinecone via VECTOR_STORE.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import lru_cache
 from typing import Protocol
 
 import numpy as np
 
 from app.llm.client import get_llm
 from app.rag.corpus import Document
-
-
-@lru_cache(maxsize=512)
-def _embed_query(query: str) -> tuple[float, ...]:
-    """Cache single-query embeddings.
-
-    The UI ships canned example questions that get re-asked repeatedly; embedding
-    is deterministic within a process (fixed model / stub), so caching by query
-    text avoids a network round trip (or stub recompute) on every repeat.
-    """
-    return tuple(get_llm().embed([query])[0])
 
 
 @dataclass(frozen=True)
@@ -95,7 +83,7 @@ class InMemoryVectorStore:
             if filtered:
                 idxs = filtered
 
-        q = np.array(_embed_query(query), dtype=float)
+        q = np.array(get_llm().embed([query])[0], dtype=float)
         sub = self.matrix[idxs]
         denom = (np.linalg.norm(sub, axis=1) * np.linalg.norm(q)) + 1e-9
         sims = sub @ q / denom
