@@ -19,6 +19,7 @@ import json
 import uuid
 
 import pandas as pd
+from pydantic import ValidationError
 
 from app.config import CURATED_ZONE, RAW_ZONE, settings
 from app.db import tx
@@ -44,14 +45,24 @@ def _validate_rows(entity: str, rows: list[dict]) -> tuple[list[dict], int, list
     model, _ = ENTITY_MODELS[entity]
     valid, failed = [], 0
     error_samples: list[str] = []  # first ~5 DISTINCT errors (capped, no growth)
+    def _record(msg: str) -> None:
+        if msg not in error_samples and len(error_samples) < _MAX_ERROR_SAMPLES:
+            error_samples.append(msg)
+
     for r in rows:
         try:
             valid.append(model(**r).model_dump())
-        except Exception as e:
+        except ValidationError as e:
             failed += 1
-            msg = str(e).splitlines()[0]
-            if msg not in error_samples and len(error_samples) < _MAX_ERROR_SAMPLES:
-                error_samples.append(msg)
+            # Field-level summaries (loc: msg) from the structured errors — not
+            # the generic "N validation errors for X" header — and without
+            # echoing raw input values into the stored sample.
+            for err in e.errors():
+                loc = ".".join(str(p) for p in err.get("loc", ()))
+                _record(f"{loc}: {err.get('msg', '')}".strip(": "))
+        except Exception as e:  # noqa: BLE001 - non-validation failure still counts
+            failed += 1
+            _record(str(e).splitlines()[0])
     return valid, failed, error_samples
 
 

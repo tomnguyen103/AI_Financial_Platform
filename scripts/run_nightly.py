@@ -19,7 +19,7 @@ from app.features.compute import compute_all
 from app.features.store import stale_groups
 from app.forecasting.service import run_all as forecasting_run_all
 from app.ingestion.pipeline import run_ingest
-from app.logging_config import get_logger
+from app.logging_config import configure_logging, get_logger
 
 log = get_logger(__name__)
 
@@ -41,6 +41,7 @@ def _stage(name: str, fn) -> dict:
 
 
 def main() -> int:
+    configure_logging()  # ensure structured handler is set before any log.exception
     print("=== nightly run ===")
     init_db()
     stages = [
