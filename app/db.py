@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     event_id TEXT PRIMARY KEY, ts TEXT, user_id TEXT, user_role TEXT, service TEXT,
     action TEXT, query_hash TEXT, input_phi_scan TEXT, output_phi_scan TEXT,
     llm_model TEXT, retrieved_sources TEXT, generated_sql TEXT,
-    response_latency_ms INTEGER, session_id TEXT, detail_json TEXT
+    response_latency_ms INTEGER, session_id TEXT, detail_json TEXT,
+    prev_hash TEXT, row_hash TEXT
 );
 CREATE TABLE IF NOT EXISTS ingest_audit (
     run_id TEXT PRIMARY KEY, ts TEXT, source_record_count INTEGER,
@@ -157,6 +158,14 @@ MIGRATIONS: list[tuple[int, str]] = [
     # that a v1-aware runner initialized the DB and is the template for real future
     # migrations (each entry: (target_version, sql_script)).
     (1, "-- v1 baseline: schema with enum CHECK constraints; no forward DDL needed.\n"),
+    # v2: tamper-evident audit hash-chain. Add prev_hash/row_hash to an existing
+    # audit_log (fresh DBs already get them from the base CREATE TABLE above).
+    # These live in their own guarded runner (see _run_migrations) because SQLite
+    # ADD COLUMN raises if the column already exists; the user_version gate stops
+    # re-application, and the runner also swallows the duplicate-column error so a
+    # DB that already has the columns advances cleanly.
+    (2, "ALTER TABLE audit_log ADD COLUMN prev_hash TEXT;\n"
+        "ALTER TABLE audit_log ADD COLUMN row_hash TEXT;\n"),
 ]
 
 
@@ -165,9 +174,24 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
     for target, sql in MIGRATIONS:
         if target <= current:
             continue
-        # executescript() implicitly commits any pending work, runs the migration,
-        # then we stamp user_version and commit — each migration in its own tx.
-        conn.executescript(sql)
+        # Run statement-by-statement (not executescript) so an idempotent
+        # "ALTER TABLE ... ADD COLUMN" is a no-op when the column already exists.
+        # A fresh DB gets prev_hash/row_hash from the base CREATE TABLE yet still
+        # starts at user_version 0, so the v2 ALTERs would otherwise raise
+        # "duplicate column name"; we swallow exactly that error and advance.
+        # Drop full-line "--" comments first (a comment may itself contain a ';').
+        body = "\n".join(
+            line for line in sql.splitlines() if not line.strip().startswith("--")
+        )
+        for statement in body.split(";"):
+            statement = statement.strip()
+            if not statement:
+                continue
+            try:
+                conn.execute(statement)
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    raise
         conn.execute(f"PRAGMA user_version = {int(target)}")
         conn.commit()
 
