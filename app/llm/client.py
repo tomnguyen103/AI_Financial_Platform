@@ -14,6 +14,9 @@ from __future__ import annotations
 import hashlib
 
 from app.config import settings
+from app.logging_config import get_logger
+
+log = get_logger(__name__)
 
 
 class LLMClient:
@@ -32,8 +35,9 @@ class LLMClient:
                 api_key=settings.openai_api_key,
                 azure_endpoint=settings.azure_openai_endpoint,
                 api_version=settings.azure_openai_api_version,
+                timeout=15.0,
             )
-        return OpenAI(api_key=settings.openai_api_key)
+        return OpenAI(api_key=settings.openai_api_key, timeout=15.0)
 
     @property
     def model_name(self) -> str:
@@ -42,18 +46,28 @@ class LLMClient:
     def complete(self, system: str, user: str, *, temperature: float = 0.0) -> str:
         if not self.enabled:
             return self._stub_complete(system, user)
-        resp = self._client.chat.completions.create(
-            model=self.model, temperature=temperature,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": user}],
-        )
-        return resp.choices[0].message.content or ""
+        try:
+            resp = self._client.chat.completions.create(
+                model=self.model, temperature=temperature,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+            )
+            return resp.choices[0].message.content or ""
+        except Exception as e:  # noqa: BLE001
+            # Timeout / API / network failure -> degrade to the deterministic
+            # stub so the request still returns a grounded (if generic) answer.
+            log.warning("llm complete failed; using stub", extra={"error": str(e)})
+            return self._stub_complete(system, user)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not self.enabled:
             return [self._stub_embed(t) for t in texts]
-        resp = self._client.embeddings.create(model=self.embed_model, input=texts)
-        return [d.embedding for d in resp.data]
+        try:
+            resp = self._client.embeddings.create(model=self.embed_model, input=texts)
+            return [d.embedding for d in resp.data]
+        except Exception as e:  # noqa: BLE001
+            log.warning("llm embed failed; using stub", extra={"error": str(e)})
+            return [self._stub_embed(t) for t in texts]
 
     # --- deterministic fallbacks -------------------------------------------
     def _stub_complete(self, system: str, user: str) -> str:

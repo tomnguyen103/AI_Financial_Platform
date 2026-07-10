@@ -19,6 +19,9 @@ from app.features.compute import compute_all
 from app.features.store import stale_groups
 from app.forecasting.service import run_all as forecasting_run_all
 from app.ingestion.pipeline import run_ingest
+from app.logging_config import get_logger
+
+log = get_logger(__name__)
 
 
 def _stage(name: str, fn) -> dict:
@@ -28,6 +31,9 @@ def _stage(name: str, fn) -> dict:
         status = "ok"
         err = None
     except Exception as e:  # noqa: BLE001
+        # Full traceback goes to the structured log stream (not just str(e)) so
+        # an operator can diagnose the failure; stdout keeps the human summary.
+        log.exception("nightly stage failed", extra={"stage": name})
         result, status, err = None, "failed", str(e)
     elapsed = round(time.time() - start, 2)
     print(f"[{status:6}] {name:24} {elapsed:>6}s  {err or result}")
