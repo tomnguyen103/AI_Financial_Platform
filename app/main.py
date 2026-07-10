@@ -22,9 +22,22 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.config import settings
 from app.db import init_db
 from app.logging_config import configure_logging, get_logger, request_id_var
 from app.routers import admin, alerts, auth, chatbot, forecasts, nl2sql
+
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; connect-src 'self' *; "
+        "img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'"
+    ),
+}
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -118,17 +131,29 @@ _RATE_WINDOW = 60.0      # seconds
 _hits: dict[str, deque] = defaultdict(deque)
 
 
+def _client_ip(request: Request) -> str:
+    if settings.trust_proxy:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @app.middleware("http")
 async def rate_limit_and_log(request: Request, call_next):
-    client = request.client.host if request.client else "unknown"
+    client = _client_ip(request)
     now = time.time()
     window = _hits[client]
     while window and now - window[0] > _RATE_WINDOW:
         window.popleft()
     if len(window) >= _RATE_MAX:
         log.warning("rate limit exceeded", extra={"client": client, "path": request.url.path})
-        return JSONResponse(status_code=429, content={"error": "rate limit exceeded"})
-    window.append(now)
+        resp = JSONResponse(status_code=429, content={"error": "rate limit exceeded"})
+        resp.headers.update(_SECURITY_HEADERS)
+        return resp
+    if not window:
+        del _hits[client]
+    _hits[client].append(now)
 
     req_id = str(uuid.uuid4())[:8]
     token = request_id_var.set(req_id)
@@ -143,12 +168,15 @@ async def rate_limit_and_log(request: Request, call_next):
                 extra={"method": request.method, "path": request.url.path,
                        "latency_ms": latency},
             )
-            return JSONResponse(
+            resp = JSONResponse(
                 status_code=500,
                 content={"error": "internal error", "request_id": req_id},
             )
+            resp.headers.update(_SECURITY_HEADERS)
+            return resp
         latency = int((time.time() - start) * 1000)
         response.headers["X-Request-ID"] = req_id
+        response.headers.update(_SECURITY_HEADERS)
         log.info(
             "request",
             extra={"method": request.method, "path": request.url.path,
