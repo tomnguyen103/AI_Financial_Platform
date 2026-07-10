@@ -1,8 +1,8 @@
 """NL-to-SQL safety + execution tests."""
 from __future__ import annotations
 
-from app.nl2sql.validator import validate_sql
 from app.nl2sql.executor import run_query
+from app.nl2sql.validator import validate_sql
 
 
 def test_select_allowed():

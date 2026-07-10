@@ -26,7 +26,7 @@ from app.security.phi import scan_output
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def _driver_narrative(facility_id: str) -> str:
@@ -142,9 +142,11 @@ def list_alerts(severity: str | None = None, status: str | None = None) -> list[
     sql = "SELECT * FROM alerts WHERE 1=1"
     params: list = []
     if severity:
-        sql += " AND severity=?"; params.append(severity)
+        sql += " AND severity=?"
+        params.append(severity)
     if status:
-        sql += " AND status=?"; params.append(status)
+        sql += " AND status=?"
+        params.append(status)
     sql += " ORDER BY created_at DESC"
     with tx() as conn:
         return [dict(r) for r in conn.execute(sql, params).fetchall()]

@@ -79,7 +79,7 @@ class PineconeVectorStore:
         for start in range(0, len(docs), batch_size):
             batch = docs[start:start + batch_size]
             vectors = get_llm().embed([doc.text for doc in batch])
-            records = [_doc_to_record(doc, vector) for doc, vector in zip(batch, vectors)]
+            records = [_doc_to_record(doc, vector) for doc, vector in zip(batch, vectors, strict=True)]
             self._index.upsert(vectors=records)
             total += len(records)
         return total

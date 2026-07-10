@@ -25,7 +25,7 @@ class SearchHit:
     metadata: dict = field(default_factory=dict)
 
     @classmethod
-    def from_document(cls, doc: Document, score: float) -> "SearchHit":
+    def from_document(cls, doc: Document, score: float) -> SearchHit:
         return cls(
             source_doc_id=doc.source_doc_id,
             entity_type=doc.entity_type,

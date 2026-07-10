@@ -24,7 +24,7 @@ ENTITY_COLUMN = {"facility": "facility_id", "attorney": "attorney_id", "case_typ
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def daily_collections(entity_type: str, entity_id: str) -> pd.Series:
@@ -149,6 +149,7 @@ def run_all() -> dict:
 
 if __name__ == "__main__":
     import json
+
     from app.db import init_db
     init_db()
     print(json.dumps(run_all(), indent=2))

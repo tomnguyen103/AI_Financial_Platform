@@ -28,7 +28,7 @@ from app.security.phi import PHI_FIELDS, mask_record
 
 
 def _utcnow() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def _load_source() -> dict[str, list[dict]]:

@@ -8,8 +8,8 @@ from __future__ import annotations
 import re
 import time
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from app.config import settings
 from app.llm.client import get_llm

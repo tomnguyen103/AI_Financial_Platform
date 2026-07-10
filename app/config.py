@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     ingest_permissive: bool = False
 
     @model_validator(mode="after")
-    def _normalize(self) -> "Settings":
+    def _normalize(self) -> Settings:
         object.__setattr__(self, "vector_store", self.vector_store.lower())
         return self
 

@@ -5,7 +5,6 @@ assertions are tolerant of empty data so the suite passes on a bare DB too.
 """
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app

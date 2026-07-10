@@ -46,7 +46,9 @@ def _fake_name(rng) -> str:
 
 
 def _fake_dob(rng) -> str:
-    y = int(rng.integers(1950, 2005)); m = int(rng.integers(1, 13)); d = int(rng.integers(1, 28))
+    y = int(rng.integers(1950, 2005))
+    m = int(rng.integers(1, 13))
+    d = int(rng.integers(1, 28))
     return f"{y:04d}-{m:02d}-{d:02d}"
 
 
