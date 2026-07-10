@@ -38,8 +38,20 @@ def test_production_with_custom_secrets_is_fine():
         app_env="production",
         jwt_secret="a-real-production-secret",
         phi_hmac_key="a-real-production-phi-key",
+        enable_dev_token=False,
     )
     s.fail_if_insecure_in_production()  # must not raise
+
+
+def test_production_with_dev_token_enabled_fails_closed():
+    s = Settings(
+        app_env="production",
+        jwt_secret="a-real-production-secret",
+        phi_hmac_key="a-real-production-phi-key",
+        enable_dev_token=True,
+    )
+    with pytest.raises(RuntimeError):
+        s.fail_if_insecure_in_production()
 
 
 def test_development_with_default_secrets_does_not_raise():
