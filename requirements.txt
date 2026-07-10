@@ -15,3 +15,4 @@ pyarrow>=15            # parquet engine for pandas
 openai>=1.30           # optional at runtime; LLM features degrade to stub without a key
 pinecone>=5.0
 pytest>=8.0
+pytest-cov>=5.0        # coverage measurement + CI coverage gate (--cov-fail-under)

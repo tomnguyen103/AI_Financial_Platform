@@ -21,5 +21,8 @@ jobs:
           pip install -r requirements.txt ruff
       - name: Lint (ruff)
         run: ruff check app scripts tests
-      - name: Test (pytest)
-        run: pytest -q
+      - name: Test (pytest + coverage gate)
+        # Coverage flags (--cov=app --cov=scripts --cov-fail-under=80) come from
+        # pyproject.toml [tool.pytest.ini_options] addopts; pytest-cov is pulled
+        # in via requirements.txt. The job fails if TOTAL coverage drops below 80%.
+        run: pytest
